@@ -5,13 +5,9 @@ import Heatmap from "./Heatmap";
 export default function Hero() {
   return (
     <section style={styles.hero}>
-
       <div style={styles.left}>
-
-      
-
         <h1 style={styles.title}>
-          Ζωντανές 
+          Ζωντανές
           <br />
           γειτονιές
           <br />
@@ -19,11 +15,12 @@ export default function Hero() {
         </h1>
 
         <p style={styles.text}>
-         Η ραγδαία αύξηση των ενοικίων και τα χιλιάδες κλειστά ακίνητα έχουν δημιουργήσει αδιέξοδο στην Αθήνα. Φτιάξαμε ένα εργαλέιο το οποίο δείχνει στους ενοικιαστές αν πληρώνουν όσο πρέπει, και στους ιδιοκτήτες αν αξίζει να ανακαινίσουν ή να πουλήσουν.
+          Η ραγδαία αύξηση των ενοικίων και τα χιλιάδες κλειστά ακίνητα έχουν δημιουργήσει αδιέξοδο στην Αθήνα.
+          Φτιάξαμε ένα εργαλείο το οποίο δείχνει στους ενοικιαστές αν πληρώνουν όσο πρέπει, και στους ιδιοκτήτες
+          αν αξίζει να ανακαινίσουν ή να πουλήσουν.
         </p>
 
         <div style={styles.buttons}>
-
           <Link to="/estimator" style={styles.primary}>
             <Calculator size={18} />
             Υπολογισμός Ενοικίου
@@ -33,15 +30,12 @@ export default function Hero() {
             <Hammer size={18} />
             ROI Ανακαίνισης
           </Link>
-
         </div>
-
       </div>
 
       <div style={styles.right}>
         <Heatmap />
       </div>
-
     </section>
   );
 }
@@ -54,7 +48,7 @@ const styles = {
     alignItems: "center",
     maxWidth: "1250px",
     margin: "0 auto",
-    padding: "70px 30px",
+    padding: "36px 30px 50px",
   },
 
   left: {
@@ -68,20 +62,20 @@ const styles = {
     padding: "8px 16px",
     borderRadius: "30px",
     fontWeight: 600,
-    marginBottom: "25px",
+    marginBottom: "18px",
     width: "fit-content",
   },
 
   title: {
-    fontSize: "64px",
+    fontSize: "50px",
     fontWeight: 800,
-    lineHeight: 1.05,
-    marginBottom: "25px",
+    lineHeight: 1.08,
+    marginBottom: "18px",
   },
 
   text: {
-    fontSize: "19px",
-    lineHeight: 1.8,
+    fontSize: "18px",
+    lineHeight: 1.65,
     color: "#555",
     maxWidth: "520px",
   },
@@ -89,7 +83,7 @@ const styles = {
   buttons: {
     display: "flex",
     gap: "15px",
-    marginTop: "40px",
+    marginTop: "24px",
     flexWrap: "wrap",
   },
 
