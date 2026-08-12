@@ -19,55 +19,27 @@ const Navbar = () => {
         .brand-logo-container {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.6rem;
           text-decoration: none;
           cursor: pointer;
         }
 
-        /* Η στέγη-καπέλο "χαιρετάει" κάθε 30 δευτερόλεπτα */
-        @keyframes acropolisHatTip {
-          0%, 88%, 100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          91% {
-            transform: translateY(-3.5px) rotate(-7deg);
-          }
-          94% {
-            transform: translateY(-1.5px) rotate(3deg);
-          }
-          97% {
-            transform: translateY(0) rotate(0deg);
-          }
-        }
-
-        .acropolis-roof-hat {
-          transform-box: fill-box;
-          transform-origin: 50% 100%;
-          animation: acropolisHatTip 30s infinite cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .acropolis-roof-hat { animation: none; }
-        }
-
-        /* Και σε hover, για άμεση ανατροφοδότηση */
-        .brand-logo-container:hover .acropolis-roof-hat {
-          animation: none;
-          transform: translateY(-3px) rotate(-6deg);
-          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
         .brand-text {
           font-family: 'Fraunces', Georgia, serif;
-          font-size: 1.35rem;
+          font-size: 1.6rem;
           font-weight: 700;
-          color: #16212B;
+          color: #FFFDF9;
           letter-spacing: -0.02em;
           transition: color 0.2s ease;
         }
 
         .brand-logo-container:hover .brand-text {
-          color: #1D4E5F;
+          color: #C98A3E;
+        }
+
+        .brand-logo-container:hover svg {
+          transform: scale(1.05);
+          transition: transform 0.2s ease;
         }
 
         .nav-link-item {
@@ -79,56 +51,15 @@ const Navbar = () => {
         }
       `}</style>
 
-    
+      
       <Link to="/" className="brand-logo-container" title="StegiAthens - Στέγη στην Αθήνα">
-        <svg
-          width="42"
-          height="42"
-          viewBox="0 0 42 42"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          role="img"
-          aria-label="Λογότυπο StegiAthens"
-        >
-        
-          <circle cx="21" cy="21" r="19" fill="#EAF2F1" />
-
-        
-          <path d="M8 30.5C12 28.5 30 28.5 34 30.5L35 33H7L8 30.5Z" fill="#D8CDB8" />
-
-        
-          <rect x="10" y="27" width="22" height="2" rx="0.5" fill="#1D4E5F" />
-          <rect x="11.5" y="20" width="2" height="7" rx="0.5" fill="#1D4E5F" />
-          <rect x="15.75" y="20" width="2" height="7" rx="0.5" fill="#1D4E5F" />
-          <rect x="20" y="20" width="2" height="7" rx="0.5" fill="#1D4E5F" />
-          <rect x="24.25" y="20" width="2" height="7" rx="0.5" fill="#1D4E5F" />
-          <rect x="28.5" y="20" width="2" height="7" rx="0.5" fill="#1D4E5F" />
-
-        
-          <rect x="10" y="18" width="22" height="2" rx="0.5" fill="#163C4A" />
-
-        
-          <g className="acropolis-roof-hat">
-        
-            <path
-              d="M6 18C6 17.5 9 16.5 21 16.5C33 16.5 36 17.5 36 18C36 18.5 33 19 21 19C9 19 6 18.5 6 18Z"
-              fill="#8A5A22"
-            />
-            
-            <path
-              d="M8 17.5L21 6.5L34 17.5H8Z"
-              fill="#C98A3E"
-              stroke="#8A5A22"
-              strokeWidth="1"
-              strokeLinejoin="round"
-            />
-           
-            <circle cx="21" cy="6.5" r="1.4" fill="#8A5A22" />
-            <circle cx="8" cy="17.5" r="1.2" fill="#8A5A22" />
-            <circle cx="34" cy="17.5" r="1.2" fill="#8A5A22" />
-          </g>
-        </svg>
-
+        <span style={styles.logoBadge}>
+          <img
+            src="/data/logo.png"
+            alt="StegiAthens"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </span>
         <span className="brand-text">StegiAthens</span>
       </Link>
 
@@ -162,13 +93,23 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '0.85rem 2.5rem',
-    backgroundColor: '#FFFDF9',
-    borderBottom: '1px solid #E7DFCD',
+    padding: '0.75rem 2.5rem',
+    backgroundColor: '#0F766E',
+    borderBottom: '1px solid #C98A3E',
     position: 'sticky',
     top: 0,
     zIndex: 1000,
-    boxShadow: '0 2px 8px rgba(31, 42, 51, 0.04)',
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.18)',
+  },
+  logoBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFDF9',
+    borderRadius: '50%',
+    width: '46px',
+    height: '46px',
+    overflow: 'hidden',
   },
   linksContainer: {
     display: 'flex',
@@ -180,17 +121,17 @@ const styles = {
     alignItems: 'center',
     gap: '0.45rem',
     textDecoration: 'none',
-    color: '#52606B',
+    color: '#C7D0D6',
     fontWeight: '500',
     fontSize: '0.9rem',
     padding: '0.5rem 0.9rem',
     borderRadius: '6px',
   },
   activeLink: {
-    color: '#1D4E5F',
-    backgroundColor: '#EAF2F1',
+    color: '#FFFDF9',
+    backgroundColor: 'rgba(201, 138, 62, 0.18)',
     fontWeight: '600',
-    border: '1px solid #D7E4E2',
+    border: '1px solid rgba(201, 138, 62, 0.45)',
   },
 };
 

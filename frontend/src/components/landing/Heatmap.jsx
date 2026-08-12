@@ -23,14 +23,11 @@ export default function Heatmap() {
 
     mapInstanceRef.current = map;
 
-  
-    L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution: "&copy; OpenStreetMap contributors",
-        maxZoom: 19,
-      }
-    ).addTo(map);
+    // OpenStreetMap
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
 
     
     loadAthensData()
@@ -57,34 +54,30 @@ export default function Heatmap() {
             return;
           }
 
-          // Εξωτερική ζώνη
+       
           L.circle(area.position, {
-            radius: radius,
-            stroke: false,
+            radius,
+            stroke: true,
+            color: area.color,
+            weight: 2,
+            opacity: 0.9,
             fillColor: area.color,
-            fillOpacity: 0.13,
-            interactive: false,
-          }).addTo(map);
-
-          // Εσωτερική ζώνη
-          L.circle(area.position, {
-            radius: radius * 0.45,
-            stroke: false,
-            fillColor: area.color,
-            fillOpacity: 0.20,
+            fillOpacity: 0.32,
             interactive: false,
           }).addTo(map);
 
           
-          if (Number(area.count) >= 75) {
+          if (area.showLabel) {
             L.marker(area.position, {
               interactive: false,
-
               icon: L.divIcon({
                 className: "",
-
                 html: `
                   <div style="
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    transform: translate(-50%, -50%);
                     background: ${area.color};
                     color: white;
                     padding: 5px 10px;
@@ -97,10 +90,9 @@ export default function Heatmap() {
                     box-shadow: 0 3px 10px rgba(0,0,0,.22);
                     border: 2px solid white;
                   ">
-                    ${area.name} · €${Number(area.price).toFixed(1)}/m²
+                    ${area.name} · €${area.price}/m²
                   </div>
                 `,
-
                 iconSize: [0, 0],
                 iconAnchor: [0, 0],
               }),
@@ -108,16 +100,11 @@ export default function Heatmap() {
           }
         });
 
-        
-        const legend = L.control({
-          position: "bottomright",
-        });
+        // Legend
+        const legend = L.control({ position: "bottomright" });
 
         legend.onAdd = () => {
-          const div = L.DomUtil.create(
-            "div",
-            "athens-heatmap-legend"
-          );
+          const div = L.DomUtil.create("div", "athens-heatmap-legend");
 
           div.innerHTML = `
             <div style="
@@ -130,61 +117,21 @@ export default function Heatmap() {
               color: #16212B;
               min-width: 135px;
             ">
-
-              <div style="
-                font-weight: 700;
-                margin-bottom: 8px;
-              ">
+              <div style="font-weight: 700; margin-bottom: 8px;">
                 Ενδεικτικό ενοίκιο €/m²
               </div>
-
-              <div style="
-                display: flex;
-                align-items: center;
-                margin-bottom: 5px;
-              ">
-                <span style="
-                  display: inline-block;
-                  width: 10px;
-                  height: 10px;
-                  border-radius: 50%;
-                  background: #B33F30;
-                  margin-right: 6px;
-                "></span>
+              <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#B33F30;margin-right:6px;"></span>
                 Ακριβό
               </div>
-
-              <div style="
-                display: flex;
-                align-items: center;
-                margin-bottom: 5px;
-              ">
-                <span style="
-                  display: inline-block;
-                  width: 10px;
-                  height: 10px;
-                  border-radius: 50%;
-                  background: #C98A3E;
-                  margin-right: 6px;
-                "></span>
+              <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C98A3E;margin-right:6px;"></span>
                 Μεσαίο
               </div>
-
-              <div style="
-                display: flex;
-                align-items: center;
-              ">
-                <span style="
-                  display: inline-block;
-                  width: 10px;
-                  height: 10px;
-                  border-radius: 50%;
-                  background: #4C7A6D;
-                  margin-right: 6px;
-                "></span>
+              <div style="display: flex; align-items: center;">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4C7A6D;margin-right:6px;"></span>
                 Προσιτό
               </div>
-
             </div>
           `;
 
@@ -193,26 +140,21 @@ export default function Heatmap() {
 
         legend.addTo(map);
 
+        
         setTimeout(() => {
           if (!cancelled) {
             map.invalidateSize();
           }
         }, 100);
       })
-
       .catch((error) => {
         if (cancelled) return;
-
-        console.error(
-          "Αποτυχία φόρτωσης cleaned_properties.csv:",
-          error
-        );
+        console.error("Αποτυχία φόρτωσης cleaned_properties.csv:", error);
       });
 
-    
+    // Cleanup
     return () => {
       cancelled = true;
-
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
