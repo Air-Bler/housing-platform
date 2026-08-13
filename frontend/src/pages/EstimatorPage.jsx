@@ -23,7 +23,12 @@ import {
   TrendingUp,
   TrendingDown,
   Building2,
-  ShieldCheck
+  ShieldCheck,
+  Image as ImageIcon,
+  Upload,
+  X,
+  Eye,
+  ArrowRight
 } from 'lucide-react';
 
 export default function FairRentEstimator() {
@@ -48,6 +53,13 @@ export default function FairRentEstimator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  
+  const [images, setImages] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [visionResult, setVisionResult] = useState(null);
+  const [visionLoading, setVisionLoading] = useState(false);
+
   const cleanName = (raw) => (raw ? raw.split('(')[0].split('-')[0].split('–')[0].trim() : '');
 
   useEffect(() => {
@@ -71,6 +83,42 @@ export default function FairRentEstimator() {
       });
   }, []);
 
+  const handleFilesAdded = (newFiles) => {
+    const validFiles = Array.from(newFiles).filter((file) => file.type.startsWith('image/'));
+    if (validFiles.length === 0) return;
+
+    const updatedImages = [...images, ...validFiles];
+    setImages(updatedImages);
+
+    const updatedPreviews = updatedImages.map((file) => URL.createObjectURL(file));
+    setPreviews(updatedPreviews);
+  };
+
+  const handleRemoveImage = (index) => {
+    const updatedImages = images.filter((_, i) => i !== index);
+    const updatedPreviews = previews.filter((_, i) => i !== index);
+    setImages(updatedImages);
+    setPreviews(updatedPreviews);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesAdded(e.dataTransfer.files);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -92,65 +140,70 @@ export default function FairRentEstimator() {
     setFormErrors({});
     setResult(null);
     setError(null);
+    setImages([]);
+    setPreviews([]);
+    setVisionResult(null);
   };
 
   const validateForm = () => {
     const errors = {};
     const currentYear = new Date().getFullYear();
 
-    if (!formData.suburb) {
-      errors.suburb = 'Παρακαλώ επιλέξτε γειτονιά.';
-    }
+    if (!formData.suburb) errors.suburb = 'Παρακαλώ επιλέξτε γειτονιά.';
 
     const sqmVal = parseFloat(formData.sqm);
-    if (!formData.sqm || isNaN(sqmVal)) {
-      errors.sqm = 'Συμπληρώστε τα m².';
-    } else if (sqmVal <= 5 || sqmVal > 1000) {
-      errors.sqm = 'Εμβαδόν 5 - 1000 m².';
-    }
+    if (!formData.sqm || isNaN(sqmVal)) errors.sqm = 'Συμπληρώστε τα m².';
+    else if (sqmVal <= 5 || sqmVal > 1000) errors.sqm = 'Εμβαδόν 5 - 1000 m².';
 
     const yearVal = parseInt(formData.year_built, 10);
-    if (!formData.year_built || isNaN(yearVal)) {
-      errors.year_built = 'Συμπληρώστε έτος.';
-    } else if (yearVal < 1850 || yearVal > currentYear) {
-      errors.year_built = `1850 - ${currentYear}.`;
-    }
+    if (!formData.year_built || isNaN(yearVal)) errors.year_built = 'Συμπληρώστε έτος.';
+    else if (yearVal < 1850 || yearVal > currentYear) errors.year_built = `1850 - ${currentYear}.`;
 
     const bedsVal = parseInt(formData.bedrooms, 10);
-    if (formData.bedrooms === '' || isNaN(bedsVal)) {
-      errors.bedrooms = 'Συμπληρώστε beds.';
-    } else if (bedsVal < 0 || bedsVal > 20) {
-      errors.bedrooms = '0 έως 20.';
-    }
+    if (formData.bedrooms === '' || isNaN(bedsVal)) errors.bedrooms = 'Συμπληρώστε beds.';
 
     const bathsVal = parseInt(formData.bathrooms, 10);
-    if (formData.bathrooms === '' || isNaN(bathsVal)) {
-      errors.bathrooms = 'Συμπληρώστε μπάνια.';
-    } else if (bathsVal < 0 || bathsVal > 10) {
-      errors.bathrooms = '0 έως 10.';
-    }
+    if (formData.bathrooms === '' || isNaN(bathsVal)) errors.bathrooms = 'Συμπληρώστε μπάνια.';
 
     const floorVal = parseInt(formData.floor, 10);
-    if (formData.floor === '' || isNaN(floorVal)) {
-      errors.floor = 'Συμπληρώστε όροφο.';
-    } else if (floorVal < -3 || floorVal > 50) {
-      errors.floor = '-3 έως 50.';
-    }
-
-    if (formData.user_asking_price !== '') {
-      const askingVal = parseFloat(formData.user_asking_price);
-      if (isNaN(askingVal) || askingVal <= 0) {
-        errors.user_asking_price = 'Θετικό ποσό.';
-      }
-    }
+    if (formData.floor === '' || isNaN(floorVal)) errors.floor = 'Συμπληρώστε όροφο.';
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
+  const handleAnalyzeVision = (estimatedPrice) => {
+    if (images.length === 0) return;
+    setVisionLoading(true);
+
+    const bodyData = new FormData();
+    bodyData.append("suburb", formData.suburb);
+    bodyData.append("sqm", formData.sqm);
+    bodyData.append("estimated_price", estimatedPrice);
+    images.forEach((file) => bodyData.append("images", file));
+
+    fetch("http://127.0.0.1:8000/api/analyze-images", {
+      method: "POST",
+      body: bodyData,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Vision API Error");
+        return res.json();
+      })
+      .then((data) => {
+        setVisionResult(data.analysis);
+        setVisionLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error analyzing images:", err);
+        setVisionLoading(false);
+      });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError(null);
+    setVisionResult(null);
 
     if (!validateForm()) {
       setError('Παρακαλώ διορθώστε τα σφάλματα στη φόρμα πριν συνεχίσετε.');
@@ -181,6 +234,10 @@ export default function FairRentEstimator() {
       .then((data) => {
         setResult(data);
         setLoading(false);
+
+        if (images.length > 0) {
+          handleAnalyzeVision(data.estimated_price);
+        }
       })
       .catch((err) => {
         setError('Κάτι πήγε στραβά κατά τον υπολογισμό. ' + err.message);
@@ -194,7 +251,6 @@ export default function FairRentEstimator() {
       ? Math.round(((askingPrice - result.estimated_price) / result.estimated_price) * 100)
       : null;
 
-  
   const getProximityPercentage = (meters) => {
     if (!meters || meters <= 0) return 0;
     if (meters <= 300) return 100;
@@ -202,12 +258,13 @@ export default function FairRentEstimator() {
     return Math.max(10, Math.round(100 - ((meters - 300) / 2700) * 90));
   };
 
-  
   const getProximityColor = (meters) => {
-    if (meters <= 600) return '#0F766E'; 
-    if (meters <= 1500) return '#C98A3E'; 
-    return '#7A7264'; 
+    if (meters <= 600) return '#0F766E';
+    if (meters <= 1500) return '#C98A3E';
+    return '#7A7264';
   };
+
+  
 
   return (
     <div style={styles.pageContainer}>
@@ -243,7 +300,7 @@ export default function FairRentEstimator() {
 
       {/* Main Layout */}
       <div style={styles.mainLayout}>
-        {/* Left Column: Form */}
+      
         <form onSubmit={handleSubmit} style={styles.formCard} noValidate>
           <div style={styles.sectionBlock}>
             <div style={styles.sectionHeader}>
@@ -291,6 +348,7 @@ export default function FairRentEstimator() {
                   placeholder="π.χ. 75"
                   value={formData.sqm}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   style={{
                     ...styles.input,
                     ...(formErrors.sqm ? styles.inputError : {}),
@@ -307,6 +365,7 @@ export default function FairRentEstimator() {
                   placeholder="π.χ. 1998"
                   value={formData.year_built}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   style={{
                     ...styles.input,
                     ...(formErrors.year_built ? styles.inputError : {}),
@@ -325,6 +384,7 @@ export default function FairRentEstimator() {
                   placeholder="π.χ. 2"
                   value={formData.bedrooms}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   style={{
                     ...styles.input,
                     ...(formErrors.bedrooms ? styles.inputError : {}),
@@ -341,6 +401,7 @@ export default function FairRentEstimator() {
                   placeholder="π.χ. 1"
                   value={formData.bathrooms}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   style={{
                     ...styles.input,
                     ...(formErrors.bathrooms ? styles.inputError : {}),
@@ -357,6 +418,7 @@ export default function FairRentEstimator() {
                   placeholder="π.χ. 3"
                   value={formData.floor}
                   onChange={handleChange}
+                  onWheel={(e) => e.target.blur()}
                   style={{
                     ...styles.input,
                     ...(formErrors.floor ? styles.inputError : {}),
@@ -424,6 +486,70 @@ export default function FairRentEstimator() {
 
           <hr style={styles.divider} />
 
+          {/*  DRAG & DROP SECTION */}
+          <div style={styles.sectionBlock}>
+            <div style={styles.sectionHeader}>
+              <ImageIcon size={18} color="#0F766E" />
+              <h3 style={styles.sectionTitle}>Φωτογραφίες Ακινήτου (AI Vision)</h3>
+            </div>
+
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              style={{
+                ...styles.dropZone,
+                ...(isDragging ? styles.dropZoneActive : {}),
+              }}
+            >
+              <input
+                type="file"
+                id="file-upload"
+                multiple
+                accept="image/*"
+                onChange={(e) => handleFilesAdded(e.target.files)}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="file-upload" style={styles.uploadLabel}>
+                <div style={styles.uploadIconCircle}>
+                  <Upload size={22} color="#0F766E" />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#16212B' }}>
+                    Σύρε (Drag & Drop) εδώ τις φωτογραφίες σου
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#7A7264' }}>
+                    ή κάνε κλικ για να επιλέξεις αρχεία από τη συσκευή σου
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {previews.length > 0 && (
+              <div style={styles.previewsGrid}>
+                {previews.map((src, index) => (
+                  <div key={index} style={styles.previewThumbWrapper}>
+                    <img src={src} alt={`upload-${index}`} style={styles.previewThumb} />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      style={styles.removeBtn}
+                      title="Αφαίρεση φωτογραφίας"
+                    >
+                      <X size={12} color="#FFFFFF" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <span style={{ fontSize: '0.75rem', color: '#7A7264' }}>
+              Προαιρετικό: Το AI θα αναλύσει οπτικά την ποιότητα ανακαίνισης και φωτεινότητας για ±15% προσαρμογή.
+            </span>
+          </div>
+
+          <hr style={styles.divider} />
+
           <div style={styles.field}>
             <label style={styles.label}>Ζητούμενο Ενοίκιο (€) — Προαιρετικό</label>
             <input
@@ -432,14 +558,12 @@ export default function FairRentEstimator() {
               placeholder="π.χ. 650 (για σύγκριση)"
               value={formData.user_asking_price}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               style={{
                 ...styles.input,
                 ...(formErrors.user_asking_price ? styles.inputError : {}),
               }}
             />
-            {formErrors.user_asking_price && (
-              <span style={styles.errorText}>{formErrors.user_asking_price}</span>
-            )}
           </div>
 
           <div style={styles.actionsRow}>
@@ -462,7 +586,7 @@ export default function FairRentEstimator() {
           </div>
         </form>
 
-        {/* Right Column: Dynamic Results Layout */}
+       
         <div style={styles.resultsColumn}>
           {!result && !loading && (
             <div style={styles.emptyStateCard}>
@@ -478,7 +602,7 @@ export default function FairRentEstimator() {
 
           {result && (
             <div style={styles.resultsWrapper}>
-              {/* Premium AI Prediction Main Card */}
+              
               <div style={styles.mainEstimateCard}>
                 <div style={styles.cardHeaderRow}>
                   <span style={styles.mainEstimateLabel}>
@@ -527,6 +651,89 @@ export default function FairRentEstimator() {
                 )}
               </div>
 
+             {/* ✨ ΠΛΟΥΣΙΑ ΚΑΡΤΑ AI VISION ANALYSIS REPORT */}
+{(visionLoading || visionResult) && (
+  <div style={styles.prettyVisionCard}>
+    <div style={styles.visionCardHeader}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Eye size={18} color="#0F766E" />
+        <h4 style={styles.visionTitle}>Αναλυτική AI Οπτική Αξιολόγηση</h4>
+      </div>
+      {visionResult && visionResult.score && (
+        <div style={styles.visionScoreBadge}>
+          <Star size={14} color="#C98A3E" fill="#C98A3E" />
+          <span>{visionResult.score} / 10</span>
+        </div>
+      )}
+    </div>
+
+    {visionLoading && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#0F766E', fontSize: '0.88rem', padding: '1.2rem 0' }}>
+        <Loader2 size={18} className="spin" />
+        <span>Αναλύουμε λεπτομερώς κάθε χώρο του ακινήτου...</span>
+      </div>
+    )}
+
+    {visionResult && !visionLoading && (
+      <div style={styles.parsedVisionWrapper}>
+        {/* Ετυμηγορία AI */}
+        {visionResult.summary_quote && (
+          <div style={styles.summaryQuoteBox}>
+            <Sparkles size={16} color="#0F766E" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#16212B', fontWeight: '500' }}>
+              "{visionResult.summary_quote}"
+            </span>
+          </div>
+        )}
+
+        {/* 📊 Αναλυτικός Πίνακας: Τι πληρώνεις / Τι γλιτώνεις */}
+        {visionResult.breakdown && visionResult.breakdown.length > 0 && (
+          <div style={styles.breakdownList}>
+            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#52606B', marginBottom: '0.2rem', display: 'block' }}>
+              ΑΝΑΛΥΣΗ ΑΞΙΑΣ ΑΝΑ ΧΩΡΟ (ΤΙ ΠΛΗΡΩΝΕΙΣ / ΓΛΙΤΩΝΕΙΣ):
+            </span>
+
+            {visionResult.breakdown.map((item, idx) => (
+              <div key={idx} style={styles.breakdownItem}>
+                <div style={{ flex: 1 }}>
+                  <span style={styles.breakdownCategory}>{item.category}</span>
+                  <p style={styles.breakdownDetails}>{item.details}</p>
+                </div>
+                <div
+                  style={{
+                    ...styles.impactBadge,
+                    backgroundColor: item.impact_euro > 0 ? '#EAF2F1' : item.impact_euro < 0 ? '#FBEAE7' : '#F3EFE6',
+                    color: item.impact_euro > 0 ? '#0F766E' : item.impact_euro < 0 ? '#B33F30' : '#52606B',
+                  }}
+                >
+                  {item.impact_euro > 0 ? `+€${item.impact_euro}/μήνα` : item.impact_euro < 0 ? `-€${Math.abs(item.impact_euro)}/μήνα` : '€0'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 💳 Τελικό Summary Κάρτας */}
+        <div style={styles.adjustmentSummaryCard}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+            <span style={{ fontSize: '0.75rem', color: '#52606B' }}>Συνολική Οπτική Προσαρμογή</span>
+            <span style={{ fontSize: '1rem', fontWeight: '700', color: visionResult.total_adjustment_euro >= 0 ? '#0F766E' : '#B33F30' }}>
+              {visionResult.total_adjustment_euro >= 0 ? `+€${visionResult.total_adjustment_euro}/μήνα` : `-€${Math.abs(visionResult.total_adjustment_euro)}/μήνα`}
+            </span>
+          </div>
+          <ArrowRight size={18} color="#0F766E" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', textAlign: 'right' }}>
+            <span style={{ fontSize: '0.75rem', color: '#52606B' }}>Τελικό Προσαρμοσμένο Ενοίκιο</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#16212B' }}>
+              €{visionResult.adjusted_price || result.estimated_price}
+            </span>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
               {/*  Deal Value Score Card */}
               <div style={styles.valueScoreCard}>
                 <div style={styles.valueScoreHeader}>
@@ -563,7 +770,6 @@ export default function FairRentEstimator() {
                   </div>
 
                   <div style={styles.poiBarsContainer}>
-                    {/*  Μετρό / ΗΣΑΠ */}
                     <PoiBarItem
                       icon={<TrainFront size={16} color="#0F766E" />}
                       title="Μετρό / ΗΣΑΠ"
@@ -573,17 +779,15 @@ export default function FairRentEstimator() {
                       getColor={getProximityColor}
                     />
 
-                    {/*  Πανεπιστήμιa */}
                     <PoiBarItem
                       icon={<GraduationCap size={16} color="#0F766E" />}
                       title="Πανεπιστήμιο"
-                      name={result.poi_distances.uni_name || "Πανεπιστημιακή Σχολή"}
+                      name={result.poi_distances.uni_name || "Πανεπιστημιούπολη"}
                       distanceMeters={result.poi_distances.uni_m}
                       getPercentage={getProximityPercentage}
                       getColor={getProximityColor}
                     />
 
-                    {/*  Νοσοκομείa */}
                     <PoiBarItem
                       icon={<HeartPulse size={16} color="#0F766E" />}
                       title="Νοσοκομείο"
@@ -593,7 +797,6 @@ export default function FairRentEstimator() {
                       getColor={getProximityColor}
                     />
 
-                    {/*  Πάρκa*/}
                     <PoiBarItem
                       icon={<Trees size={16} color="#0F766E" />}
                       title="Πάρκο"
@@ -626,7 +829,7 @@ export default function FairRentEstimator() {
                 </div>
               )}
 
-              {/*  Παράγοντες Διάμορφωσης Τιμής */}
+              {/* Παράγοντες Διάμορφωσης Τιμής */}
               {result.reasons && result.reasons.length > 0 && (
                 <div style={styles.infoCard}>
                   <h4 style={styles.infoCardTitle}>Παράγοντες Διάμορφωσης Τιμής</h4>
@@ -658,7 +861,6 @@ export default function FairRentEstimator() {
     </div>
   );
 }
-
 
 function PoiBarItem({ icon, title, name, distanceMeters, getPercentage, getColor }) {
   const pct = getPercentage(distanceMeters);
@@ -837,7 +1039,6 @@ const styles = {
     color: '#16212B',
     backgroundColor: '#FFFFFF',
     outline: 'none',
-    transition: 'border-color 0.2s ease',
   },
   selectInput: {
     width: '100%',
@@ -851,17 +1052,13 @@ const styles = {
     backgroundColor: '#FFFFFF',
     outline: 'none',
     cursor: 'pointer',
-    transition: 'border-color 0.2s ease',
   },
   inputError: {
     borderColor: '#B33F30 !important',
-    backgroundColor: '#FFFDFD',
   },
   errorText: {
     fontSize: '0.75rem',
     color: '#B33F30',
-    fontWeight: '500',
-    marginTop: '0.15rem',
   },
   grid2: {
     display: 'grid',
@@ -891,7 +1088,6 @@ const styles = {
     fontSize: '0.85rem',
     fontWeight: '500',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
     userSelect: 'none',
   },
   pillActive: {
@@ -900,6 +1096,163 @@ const styles = {
     color: '#0F766E',
     fontWeight: '600',
   },
+  dropZone: {
+    border: '2px dashed #D8CDB8',
+    borderRadius: '12px',
+    padding: '1.25rem',
+    backgroundColor: '#FAF8F5',
+    textAlign: 'center',
+    transition: 'all 0.2s ease',
+    cursor: 'pointer',
+  },
+  dropZoneActive: {
+    borderColor: '#0F766E',
+    backgroundColor: '#EAF2F1',
+  },
+  uploadLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1rem',
+    cursor: 'pointer',
+  },
+  uploadIconCircle: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '50%',
+    backgroundColor: '#EAF2F1',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  previewsGrid: {
+    display: 'flex',
+    gap: '0.6rem',
+    flexWrap: 'wrap',
+    marginTop: '0.5rem',
+  },
+  previewThumbWrapper: {
+    position: 'relative',
+    width: '64px',
+    height: '64px',
+    borderRadius: '8px',
+    overflow: 'hidden',
+    border: '1px solid #D8CDB8',
+  },
+  previewThumb: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  removeBtn: {
+    position: 'absolute',
+    top: '3px',
+    right: '3px',
+    backgroundColor: 'rgba(179, 63, 48, 0.85)',
+    border: 'none',
+    borderRadius: '50%',
+    width: '18px',
+    height: '18px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    padding: 0,
+  },
+
+  /* 🌟 Pretty Vision Card Styles */
+  prettyVisionCard: {
+    backgroundColor: '#FFFDF9',
+    border: '1px solid #C5E0DC',
+    borderRadius: '16px',
+    padding: '1.25rem',
+    boxShadow: '0 4px 15px rgba(15, 118, 110, 0.05)',
+  },
+  visionCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '0.85rem',
+    borderBottom: '1px solid #E7DFCD',
+    paddingBottom: '0.65rem',
+  },
+  visionTitle: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '0.98rem',
+    fontWeight: '600',
+    color: '#16212B',
+    margin: 0,
+  },
+  visionScoreBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    backgroundColor: '#FBF3E8',
+    color: '#8A5D20',
+    padding: '0.3rem 0.65rem',
+    borderRadius: '999px',
+    fontSize: '0.82rem',
+    fontWeight: '700',
+  },
+  parsedVisionWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+  },
+  summaryQuoteBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    backgroundColor: '#F3EFE6',
+    borderRadius: '10px',
+    padding: '0.65rem 0.85rem',
+  },
+  breakdownList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.6rem',
+    marginTop: '0.25rem',
+  },
+  breakdownItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '0.8rem',
+    backgroundColor: '#FAF8F5',
+    border: '1px solid #E7DFCD',
+    borderRadius: '10px',
+    padding: '0.65rem 0.85rem',
+  },
+  breakdownCategory: {
+    display: 'block',
+    fontSize: '0.8rem',
+    fontWeight: '700',
+    color: '#16212B',
+  },
+  breakdownDetails: {
+    fontSize: '0.78rem',
+    color: '#52606B',
+    margin: 0,
+    lineHeight: '1.3',
+  },
+  impactBadge: {
+    fontSize: '0.78rem',
+    fontWeight: '700',
+    padding: '0.35rem 0.65rem',
+    borderRadius: '8px',
+    whiteSpace: 'nowrap',
+  },
+  adjustmentSummaryCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F3EFE6',
+    borderRadius: '10px',
+    padding: '0.75rem 1rem',
+    marginTop: '0.25rem',
+  },
+
   actionsRow: {
     display: 'flex',
     gap: '0.75rem',
@@ -919,7 +1272,6 @@ const styles = {
     fontSize: '0.95rem',
     fontWeight: '600',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(15,118,110,0.2)',
   },
   clearBtn: {
     display: 'flex',
@@ -934,8 +1286,6 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
   },
-
-  /* Right Column Styling */
   resultsColumn: {
     height: '100%',
   },
@@ -1062,8 +1412,6 @@ const styles = {
     alignItems: 'center',
     textAlign: 'center',
   },
-
-  /* Deal Value Rating */
   valueScoreCard: {
     backgroundColor: '#FFFDF9',
     border: '1px solid #E7DFCD',
@@ -1106,8 +1454,6 @@ const styles = {
     fontSize: '0.82rem',
     color: '#52606B',
   },
-
-  /* Cards General */
   infoCard: {
     backgroundColor: '#FFFDF9',
     border: '1px solid #E7DFCD',
