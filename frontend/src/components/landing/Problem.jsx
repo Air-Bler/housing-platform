@@ -1,4 +1,5 @@
 import React from "react";
+import { TriangleAlert, Compass } from "lucide-react";
 
 export default function Problem() {
   return (
@@ -26,64 +27,55 @@ export default function Problem() {
 
         <div style={styles.grid}>
 
-          {/* PROBLEM CARD */}
+          {/* Η ΠΡΟΚΛΗΣΗ */}
 
-          <div style={styles.problemCard}>
+          <div style={styles.column}>
+            <TriangleAlert size={26} color="#B33F30" strokeWidth={2} style={styles.icon} />
 
-            <div style={styles.problemLine}></div>
-
-            <div>
-              <div style={styles.label}>
-                Η ΠΡΟΚΛΗΣΗ
-              </div>
-
-              <h3 style={styles.cardTitle}>
-                Πολλά σπίτια μένουν εκτός αγοράς.
-              </h3>
-
-              <p style={styles.cardText}>
-                Κλειστές και αναξιοποίητες κατοικίες συνυπάρχουν
-                με μια αυξανόμενη ανάγκη για διαθέσιμη στέγαση.
-              </p>
-
-              <p style={styles.cardText}>
-                Παράλληλα, η εικόνα της αγοράς διαφέρει σημαντικά
-                από γειτονιά σε γειτονιά και δεν είναι πάντα εύκολο
-                να γίνει κατανοητή.
-              </p>
+            <div style={styles.label}>
+              Η ΠΡΟΚΛΗΣΗ
             </div>
 
+            <h3 style={styles.cardTitle}>
+              Πολλά σπίτια μένουν εκτός αγοράς.
+            </h3>
+
+            <p style={styles.cardText}>
+              Κλειστές και αναξιοποίητες κατοικίες συνυπάρχουν
+              με μια αυξανόμενη ανάγκη για διαθέσιμη στέγαση.
+            </p>
+
+            <p style={styles.cardText}>
+              Παράλληλα, η εικόνα της αγοράς διαφέρει σημαντικά
+              από γειτονιά σε γειτονιά και δεν είναι πάντα εύκολο
+              να γίνει κατανοητή.
+            </p>
           </div>
 
+          {/* Η ΠΡΟΣΕΓΓΙΣΗ ΜΑΣ */}
 
-          {/* SOLUTION CARD */}
+          <div style={{ ...styles.column, ...styles.columnDivider }}>
+            <Compass size={26} color="#0F766E" strokeWidth={2} style={styles.icon} />
 
-          <div style={styles.solutionCard}>
-
-            <div style={styles.solutionLine}></div>
-
-            <div>
-              <div style={styles.labelSolution}>
-                Η ΠΡΟΣΕΓΓΙΣΗ ΜΑΣ
-              </div>
-
-              <h3 style={styles.cardTitle}>
-                Κάνουμε την αγορά πιο κατανοητή.
-              </h3>
-
-              <p style={styles.cardText}>
-                Συγκεντρώνουμε πραγματικά δεδομένα από την αγορά
-                ακινήτων και τα μετατρέπουμε σε χρήσιμη πληροφορία
-                για κάθε γειτονιά.
-              </p>
-
-              <p style={styles.cardText}>
-                Έτσι βοηθάμε ενοικιαστές και ιδιοκτήτες να βλέπουν
-                την πραγματική εικόνα της αγοράς και να παίρνουν
-                πιο ενημερωμένες αποφάσεις.
-              </p>
+            <div style={styles.labelSolution}>
+              Η ΠΡΟΣΕΓΓΙΣΗ ΜΑΣ
             </div>
 
+            <h3 style={styles.cardTitle}>
+              Κάνουμε την αγορά πιο κατανοητή.
+            </h3>
+
+            <p style={styles.cardText}>
+              Συγκεντρώνουμε πραγματικά δεδομένα από την αγορά
+              ακινήτων και τα μετατρέπουμε σε χρήσιμη πληροφορία
+              για κάθε γειτονιά.
+            </p>
+
+            <p style={styles.cardText}>
+              Έτσι βοηθάμε ενοικιαστές και ιδιοκτήτες να βλέπουν
+              την πραγματική εικόνα της αγοράς και να παίρνουν
+              πιο ενημερωμένες αποφάσεις.
+            </p>
           </div>
 
         </div>
@@ -106,7 +98,7 @@ const styles = {
 
   header: {
     maxWidth: "760px",
-    marginBottom: "38px",
+    marginBottom: "48px",
   },
 
   eyebrow: {
@@ -119,6 +111,7 @@ const styles = {
   },
 
   title: {
+    fontFamily: "'Fraunces', Georgia, serif",
     fontSize: "38px",
     lineHeight: 1.15,
     fontWeight: 800,
@@ -137,55 +130,21 @@ const styles = {
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
+    gap: 0,
   },
 
-  /* ΚΟΚΚΙΝΟ CARD */
-
-  problemCard: {
-    position: "relative",
-    display: "flex",
-    gap: "18px",
-    padding: "28px",
-    paddingLeft: "33px",
-    background: "#FFFDFC",
-    border: "1px solid #E9D9D4",
-    borderRadius: "20px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
-    overflow: "hidden",
+  column: {
+    paddingRight: "44px",
   },
 
-  problemLine: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: "5px",
-    background: "#E8AAA3",
+  columnDivider: {
+    paddingRight: 0,
+    paddingLeft: "44px",
+    borderLeft: "1px solid #D9E2E0",
   },
 
-  /* ΠΡΑΣΙΝΟ CARD */
-
-  solutionCard: {
-    position: "relative",
-    display: "flex",
-    gap: "18px",
-    padding: "28px",
-    paddingLeft: "33px",
-    background: "#FFFFFF",
-    border: "1px solid #D5E5E1",
-    borderRadius: "20px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
-    overflow: "hidden",
-  },
-
-  solutionLine: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: "5px",
-    background: "#9BC7B5",
+  icon: {
+    marginBottom: "16px",
   },
 
   label: {
@@ -205,17 +164,18 @@ const styles = {
   },
 
   cardTitle: {
-    fontSize: "22px",
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: "24px",
     lineHeight: 1.25,
-    fontWeight: 800,
+    fontWeight: 700,
     color: "#16212B",
     margin: "0 0 14px 0",
   },
 
   cardText: {
     fontSize: "15px",
-    lineHeight: 1.6,
+    lineHeight: 1.65,
     color: "#667085",
-    margin: "0 0 9px 0",
+    margin: "0 0 12px 0",
   },
 };
