@@ -7,11 +7,11 @@ export default function Hero() {
     <section style={styles.hero}>
       <div style={styles.left}>
         <h1 style={styles.title}>
-          Ζωντανές
+          Ό,τι χρειάζεσαι
           <br />
-          γειτονιές
+          για να πάρεις σωστές αποφάσεις για τα
           <br />
-          στην Αθήνα.
+         ακίνητα στην Αθήνα.
         </h1>
 
         <p style={styles.text}>
@@ -67,6 +67,7 @@ const styles = {
   },
 
   title: {
+    fontFamily: "'Fraunces', Georgia, serif",
     fontSize: "50px",
     fontWeight: 800,
     lineHeight: 1.08,
