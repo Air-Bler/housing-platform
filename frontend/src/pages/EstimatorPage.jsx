@@ -544,7 +544,7 @@ export default function FairRentEstimator() {
             )}
 
             <span style={{ fontSize: '0.75rem', color: '#7A7264' }}>
-              Προαιρετικό: Το AI θα αναλύσει οπτικά την ποιότητα ανακαίνισης και φωτεινότητας για ±15% προσαρμογή.
+              Προαιρετικό: Το AI θα αναλύσει οπτικά την ποιότητα ανακαίνισης και φωτεινότητα των χώρων, και θα σου δώσει βαθμολογία 1-10 για το ακίνητο.
             </span>
           </div>
 
@@ -651,13 +651,13 @@ export default function FairRentEstimator() {
                 )}
               </div>
 
-             {/* ✨ ΠΛΟΥΣΙΑ ΚΑΡΤΑ AI VISION ANALYSIS REPORT */}
-{(visionLoading || visionResult) && (
-  <div style={styles.prettyVisionCard}>
+             {/* AI VISION ANALYSIS REPORT */}
+{(visionLoading || (visionResult && !visionResult.error)) && (
+  <div style={styles.visionCard}>
     <div style={styles.visionCardHeader}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Eye size={18} color="#0F766E" />
-        <h4 style={styles.visionTitle}>Αναλυτική AI Οπτική Αξιολόγηση</h4>
+        <Sparkles size={18} color="#0F766E" />
+        <h4 style={styles.visionTitle}>Οπτική Αξιολόγηση Ακινήτου (AI Vision)</h4>
       </div>
       {visionResult && visionResult.score && (
         <div style={styles.visionScoreBadge}>
@@ -667,68 +667,59 @@ export default function FairRentEstimator() {
       )}
     </div>
 
+    {/* Spinner όσο φορτώνει */}
     {visionLoading && (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#0F766E', fontSize: '0.88rem', padding: '1.2rem 0' }}>
-        <Loader2 size={18} className="spin" />
-        <span>Αναλύουμε λεπτομερώς κάθε χώρο του ακινήτου...</span>
+      <div style={styles.loaderContainer}>
+        <Loader2 size={28} color="#0F766E" className="spin" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#16212B' }}>
+            Ανάλυση φωτογραφιών σε εξέλιξη...
+          </span>
+          <span style={{ fontSize: '0.78rem', color: '#7A7264' }}>
+            Το AI εξετάζει τους χώρους και τη φωτεινότητα
+          </span>
+        </div>
       </div>
     )}
 
     {visionResult && !visionLoading && (
-      <div style={styles.parsedVisionWrapper}>
-        {/* Ετυμηγορία AI */}
-        {visionResult.summary_quote && (
-          <div style={styles.summaryQuoteBox}>
-            <Sparkles size={16} color="#0F766E" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: '0.85rem', fontStyle: 'italic', color: '#16212B', fontWeight: '500' }}>
-              "{visionResult.summary_quote}"
-            </span>
+      <div style={styles.visionBody}>
+        {/* Σύνοψη */}
+        {visionResult.summary && (
+          <p style={styles.visionSummaryText}>
+            {visionResult.summary}
+          </p>
+        )}
+
+        {/* Θετικά Στοιχεία */}
+        {visionResult.highlights && visionResult.highlights.length > 0 && (
+          <div style={styles.visionListBlock}>
+            <span style={styles.listBlockTitle}>Δυνατά Σημεία:</span>
+            <ul style={styles.visionList}>
+              {visionResult.highlights.map((h, i) => (
+                <li key={i} style={styles.visionListItemPositive}>
+                  <CheckCircle2 size={15} color="#0F766E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
-        {/* 📊 Αναλυτικός Πίνακας: Τι πληρώνεις / Τι γλιτώνεις */}
-        {visionResult.breakdown && visionResult.breakdown.length > 0 && (
-          <div style={styles.breakdownList}>
-            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#52606B', marginBottom: '0.2rem', display: 'block' }}>
-              ΑΝΑΛΥΣΗ ΑΞΙΑΣ ΑΝΑ ΧΩΡΟ (ΤΙ ΠΛΗΡΩΝΕΙΣ / ΓΛΙΤΩΝΕΙΣ):
-            </span>
-
-            {visionResult.breakdown.map((item, idx) => (
-              <div key={idx} style={styles.breakdownItem}>
-                <div style={{ flex: 1 }}>
-                  <span style={styles.breakdownCategory}>{item.category}</span>
-                  <p style={styles.breakdownDetails}>{item.details}</p>
-                </div>
-                <div
-                  style={{
-                    ...styles.impactBadge,
-                    backgroundColor: item.impact_euro > 0 ? '#EAF2F1' : item.impact_euro < 0 ? '#FBEAE7' : '#F3EFE6',
-                    color: item.impact_euro > 0 ? '#0F766E' : item.impact_euro < 0 ? '#B33F30' : '#52606B',
-                  }}
-                >
-                  {item.impact_euro > 0 ? `+€${item.impact_euro}/μήνα` : item.impact_euro < 0 ? `-€${Math.abs(item.impact_euro)}/μήνα` : '€0'}
-                </div>
-              </div>
-            ))}
+        {/* Σημεία Προσοχής */}
+        {visionResult.observations && visionResult.observations.length > 0 && (
+          <div style={styles.visionListBlock}>
+            <span style={styles.listBlockTitle}>Σημεία Προσοχής:</span>
+            <ul style={styles.visionList}>
+              {visionResult.observations.map((obs, i) => (
+                <li key={i} style={styles.visionListItemObservation}>
+                  <AlertCircle size={15} color="#C98A3E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span>{obs}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
-
-        {/* 💳 Τελικό Summary Κάρτας */}
-        <div style={styles.adjustmentSummaryCard}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-            <span style={{ fontSize: '0.75rem', color: '#52606B' }}>Συνολική Οπτική Προσαρμογή</span>
-            <span style={{ fontSize: '1rem', fontWeight: '700', color: visionResult.total_adjustment_euro >= 0 ? '#0F766E' : '#B33F30' }}>
-              {visionResult.total_adjustment_euro >= 0 ? `+€${visionResult.total_adjustment_euro}/μήνα` : `-€${Math.abs(visionResult.total_adjustment_euro)}/μήνα`}
-            </span>
-          </div>
-          <ArrowRight size={18} color="#0F766E" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', textAlign: 'right' }}>
-            <span style={{ fontSize: '0.75rem', color: '#52606B' }}>Τελικό Προσαρμοσμένο Ενοίκιο</span>
-            <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#16212B' }}>
-              €{visionResult.adjusted_price || result.estimated_price}
-            </span>
-          </div>
-        </div>
       </div>
     )}
   </div>
@@ -1512,5 +1503,99 @@ const styles = {
     borderRadius: '8px',
     fontSize: '0.82rem',
     fontWeight: '500',
+
+    visionCard: {
+    backgroundColor: '#FFFDF9',
+    border: '1px solid #C5E0DC',
+    borderRadius: '16px',
+    padding: '1.25rem',
+    boxShadow: '0 4px 15px rgba(15, 118, 110, 0.05)',
+  },
+  visionCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '0.85rem',
+    borderBottom: '1px solid #E7DFCD',
+    paddingBottom: '0.65rem',
+  },
+  visionTitle: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '0.98rem',
+    fontWeight: '600',
+    color: '#16212B',
+    margin: 0,
+  },
+  visionScoreBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    backgroundColor: '#FBF3E8',
+    color: '#8A5D20',
+    padding: '0.3rem 0.65rem',
+    borderRadius: '999px',
+    fontSize: '0.82rem',
+    fontWeight: '700',
+  },
+  loaderContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    padding: '1.2rem 1rem',
+    backgroundColor: '#FAF8F5',
+    borderRadius: '12px',
+    border: '1px dashed #D8CDB8',
+  },
+  visionBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.85rem',
+  },
+  visionSummaryText: {
+    fontSize: '0.88rem',
+    lineHeight: '1.5',
+    color: '#16212B',
+    margin: 0,
+    backgroundColor: '#F9F6EE',
+    padding: '0.75rem',
+    borderRadius: '8px',
+    borderLeft: '3px solid #0F766E',
+  },
+  visionListBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.4rem',
+  },
+  listBlockTitle: {
+    fontSize: '0.78rem',
+    fontWeight: '700',
+    color: '#52606B',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  visionList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.4rem',
+  },
+  visionListItemPositive: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '0.5rem',
+    fontSize: '0.82rem',
+    color: '#16212B',
+    lineHeight: '1.4',
+  },
+  visionListItemObservation: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '0.5rem',
+    fontSize: '0.82rem',
+    color: '#52606B',
+    lineHeight: '1.4',
+  },
   },
 };
