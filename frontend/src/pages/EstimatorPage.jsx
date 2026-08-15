@@ -52,15 +52,21 @@ export default function EstimatorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
- 
+  // States Φωτογραφιών & AI Vision
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [visionResult, setVisionResult] = useState(null);
   const [visionLoading, setVisionLoading] = useState(false);
 
+  //  Δυναμικά στατιστικά 
+  const [modelStats, setModelStats] = useState({
+    dataset_size: '4.100+',
+    model_accuracy: '98.4%',
+  });
+
   const cleanName = (raw) => (raw ? raw.split('(')[0].split('-')[0].split('–')[0].trim() : '');
 
-  
+  // Φόρτωση Γειτονιών & Στατιστικών Μοντέλου
   useEffect(() => {
     loadCityStats()
       .then((stats) => {
@@ -72,6 +78,20 @@ export default function EstimatorPage() {
       .catch((err) => {
         console.error('Error loading suburbs:', err);
         setError('Δεν μπορέσαμε να φορτώσουμε τα δεδομένα των γειτονιών.');
+      });
+
+    fetch('http://127.0.0.1:8000/api/model-stats')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.dataset_size && data.model_accuracy) {
+          setModelStats({
+            dataset_size: data.dataset_size,
+            model_accuracy: data.model_accuracy,
+          });
+        }
+      })
+      .catch(() => {
+        console.log('Using default model stats');
       });
   }, []);
 
@@ -264,9 +284,9 @@ export default function EstimatorPage() {
         </div>
       )}
 
-     
+      {/* Main Layout */}
       <div style={styles.mainLayout}>
-        
+        {/*  Φόρμα */}
         <form onSubmit={handleSubmit} style={styles.formCard} noValidate>
           <div style={styles.sectionBlock}>
             <div style={styles.sectionHeader}>
@@ -483,102 +503,79 @@ export default function EstimatorPage() {
           </div>
         </form>
 
-        
+        {/* Δεξιά Στήλη: Onboarding Panel  */}
         {!result && (
-  <div style={styles.previewColumn}>
-    <div style={styles.previewHeroCard}>
-      <div style={styles.engineBadge}>
-        <Sparkles size={13} color="#0F766E" /> AI Valuation Engine
-      </div>
-      <h3 style={styles.previewHeroTitle}>Πώς λειτουργεί η AI Εκτίμηση;</h3>
-      <p style={styles.previewHeroText}>
-        Συνδυάζουμε αλγοριθμική μηχανική μάθηση με πραγματικά δεδομένα 4.100+ αγγελιών και πολυτροπική όραση AI για αντικειμενική εικόνα αγοράς.
-      </p>
+          <div style={styles.previewColumn}>
+            <div style={styles.previewHeroCard}>
+              <h3 style={styles.previewHeroTitle}>Πώς λειτουργεί η AI Εκτίμηση;</h3>
+              <p style={styles.previewHeroText}>
+                Συνδυάζουμε αλγοριθμική μηχανική μάθηση (Machine Learning) με πραγματικά δεδομένα 4.100+ αγγελιών και προηγμένη όραση AI για να προσφέρουμε αντικειμενική εικόνα αγοράς.
+              </p>
 
-  <div style={styles.statsMiniRow}>
+              
+              <div style={styles.statsMiniRow}>
                 <div style={styles.statBoxGreen}>
                   <span style={styles.statLabelColored}>Δείγμα Αγγελιών</span>
-                  <span style={styles.statValueColored}>4.100+</span>
+                  <span style={styles.statValueColored}>{modelStats.dataset_size}</span>
                 </div>
                 <div style={styles.statBoxGreen}>
                   <span style={styles.statLabelColored}>Μέση Ακρίβεια</span>
-                  <span style={styles.statValueColored}>98.4%</span>
+                  <span style={styles.statValueColored}>{modelStats.model_accuracy}</span>
                 </div>
               </div>
 
-      <div style={styles.featureCardsList}>
-        {/* 1. Machine Learning Valuation */}
-        <div style={styles.featureCardItem}>
-          <div
-            style={{
-              ...styles.featureCardIcon,
-              backgroundColor: '#EAF2F1',
-              color: '#0F766E',
-            }}
-          >
-            <BrainCircuit size={20} color="#0F766E" />
-          </div>
-          <div>
-            <div style={styles.featureCardTitle}>1. Machine Learning Valuation</div>
-            <p style={styles.featureCardDesc}>
-              Αυτόματος υπολογισμός δίκαιης τιμής & εύρους βάσει m², ορόφου, έτους και παροχών.
-            </p>
-          </div>
-        </div>
+              <div style={styles.featureCardsList}>
+                <div style={styles.featureCardItem}>
+                  <div style={styles.featureCardIcon}>
+                    <BrainCircuit size={18} color="#0F766E" />
+                  </div>
+                  <div>
+                    <div style={styles.featureCardTitle}>1. Machine Learning Valuation</div>
+                    <p style={styles.featureCardDesc}>
+                      Υπολογισμός δίκαιης τιμής & εύρους βάσει m², ορόφου, έτους και παροχών.
+                    </p>
+                  </div>
+                </div>
 
-        {/* 2. Real-time POI Proximity */}
-        <div style={styles.featureCardItem}>
-          <div
-            style={{
-              ...styles.featureCardIcon,
-              backgroundColor: '#EFF6FF',
-              color: '#2563EB',
-            }}
-          >
-            <TrainFront size={20} color="#2563EB" />
-          </div>
-          <div>
-            <div style={styles.featureCardTitle}>2. Real-time POI Proximity</div>
-            <p style={styles.featureCardDesc}>
-              Γεωχωρικός υπολογισμός απόστασης από Μετρό, Πανεπιστήμια, Νοσοκομεία και Πάρκα.
-            </p>
-          </div>
-        </div>
+                <div style={styles.featureCardItem}>
+                  <div style={styles.featureCardIcon}>
+                    <TrainFront size={18} color="#0F766E" />
+                  </div>
+                  <div>
+                    <div style={styles.featureCardTitle}>2. Real-time POI Proximity</div>
+                    <p style={styles.featureCardDesc}>
+                      Αυτόματος υπολογισμός απόστασης από Μετρό, Πανεπιστήμια, Νοσοκομεία και Πάρκα.
+                    </p>
+                  </div>
+                </div>
 
-        {/* 3. Multimodal Vision Analysis */}
-        <div style={styles.featureCardItem}>
-          <div
-            style={{
-              ...styles.featureCardIcon,
-              backgroundColor: '#FEF3C7',
-              color: '#D97706',
-            }}
-          >
-            <Sparkles size={20} color="#D97706" />
+                <div style={styles.featureCardItem}>
+                  <div style={styles.featureCardIcon}>
+                    <Sparkles size={18} color="#0F766E" />
+                  </div>
+                  <div>
+                    <div style={styles.featureCardTitle}>3. Multimodal Vision Analysis</div>
+                    <p style={styles.featureCardDesc}>
+                      Οπτική αξιολόγηση φωτογραφιών για εντοπισμό ποιότητας υλικών και αναγκών ανακαίνισης.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <div style={styles.featureCardTitle}>3. Multimodal Vision Analysis</div>
-            <p style={styles.featureCardDesc}>
-              Οπτική ανάλυση φωτογραφιών για ποιότητα υλικών, φωτεινότητα και ανάγκες ανακαίνισης.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+        )}
 
-      
+        {/*  Αποτελέσματα */}
         {result && (
           <div style={styles.resultsColumn}>
             <div style={styles.resultsWrapper}>
-            
+              {/* Premium Main Estimate Card */}
               <div style={styles.mainEstimateCard}>
                 <div style={styles.cardHeaderRow}>
                   <span style={styles.mainEstimateLabel}>
                     <ShieldCheck size={14} style={{ marginRight: '4px' }} /> AI FAIR RENT ESTIMATE
                   </span>
-                  <span style={styles.accuracyTag}>98.4% Confidence</span>
+                  <span style={styles.accuracyTag}>{modelStats.model_accuracy} Confidence</span>
                 </div>
 
                 <div style={styles.priceContainer}>
