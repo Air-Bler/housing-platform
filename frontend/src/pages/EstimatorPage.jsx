@@ -485,64 +485,88 @@ export default function EstimatorPage() {
 
         
         {!result && (
-          <div style={styles.previewColumn}>
-            <div style={styles.previewHeroCard}>
-              <h3 style={styles.previewHeroTitle}>Πώς λειτουργεί η AI Εκτίμηση;</h3>
-              <p style={styles.previewHeroText}>
-                Συνδυάζουμε αλγοριθμική μηχανική μάθηση (Machine Learning) με πραγματικά δεδομένα 4.100+ αγγελιών και προηγμένη όραση AI για να προσφέρουμε αντικειμενική εικόνα αγοράς.
-              </p>
+  <div style={styles.previewColumn}>
+    <div style={styles.previewHeroCard}>
+      <div style={styles.engineBadge}>
+        <Sparkles size={13} color="#0F766E" /> AI Valuation Engine
+      </div>
+      <h3 style={styles.previewHeroTitle}>Πώς λειτουργεί η AI Εκτίμηση;</h3>
+      <p style={styles.previewHeroText}>
+        Συνδυάζουμε αλγοριθμική μηχανική μάθηση με πραγματικά δεδομένα 4.100+ αγγελιών και πολυτροπική όραση AI για αντικειμενική εικόνα αγοράς.
+      </p>
 
-              <div style={styles.statsMiniRow}>
-                <div style={styles.statMiniBox}>
-                  <span style={styles.statMiniLabel}>Δείγμα Αγγελιών</span>
-                  <span style={styles.statMiniValue}>4.100+</span>
+  <div style={styles.statsMiniRow}>
+                <div style={styles.statBoxGreen}>
+                  <span style={styles.statLabelColored}>Δείγμα Αγγελιών</span>
+                  <span style={styles.statValueColored}>4.100+</span>
                 </div>
-                <div style={styles.statMiniBox}>
-                  <span style={styles.statMiniLabel}>Μέση Ακρίβεια Μοντέλου</span>
-                  <span style={styles.statMiniValue}>98.4%</span>
+                <div style={styles.statBoxGreen}>
+                  <span style={styles.statLabelColored}>Μέση Ακρίβεια</span>
+                  <span style={styles.statValueColored}>98.4%</span>
                 </div>
               </div>
 
-              <div style={styles.featureCardsList}>
-                <div style={styles.featureCardItem}>
-                  <div style={styles.featureCardIcon}>
-                    <BrainCircuit size={18} color="#0F766E" />
-                  </div>
-                  <div>
-                    <div style={styles.featureCardTitle}>1. Machine Learning Valuation</div>
-                    <p style={styles.featureCardDesc}>
-                      Υπολογισμός δίκαιης τιμής & εύρους βάσει m², ορόφου, έτους και παροχών.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={styles.featureCardItem}>
-                  <div style={styles.featureCardIcon}>
-                    <TrainFront size={18} color="#0F766E" />
-                  </div>
-                  <div>
-                    <div style={styles.featureCardTitle}>2. Real-time POI Proximity</div>
-                    <p style={styles.featureCardDesc}>
-                      Αυτόματος υπολογισμός απόστασης από Μετρό, Πανεπιστήμια, Νοσοκομεία και Πάρκα.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={styles.featureCardItem}>
-                  <div style={styles.featureCardIcon}>
-                    <Sparkles size={18} color="#0F766E" />
-                  </div>
-                  <div>
-                    <div style={styles.featureCardTitle}>3. Multimodal Vision Analysis</div>
-                    <p style={styles.featureCardDesc}>
-                      Οπτική αξιολόγηση φωτογραφιών για εντοπισμό ποιότητας υλικών και αναγκών ανακαίνισης.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div style={styles.featureCardsList}>
+        {/* 1. Machine Learning Valuation */}
+        <div style={styles.featureCardItem}>
+          <div
+            style={{
+              ...styles.featureCardIcon,
+              backgroundColor: '#EAF2F1',
+              color: '#0F766E',
+            }}
+          >
+            <BrainCircuit size={20} color="#0F766E" />
           </div>
-        )}
+          <div>
+            <div style={styles.featureCardTitle}>1. Machine Learning Valuation</div>
+            <p style={styles.featureCardDesc}>
+              Αυτόματος υπολογισμός δίκαιης τιμής & εύρους βάσει m², ορόφου, έτους και παροχών.
+            </p>
+          </div>
+        </div>
+
+        {/* 2. Real-time POI Proximity */}
+        <div style={styles.featureCardItem}>
+          <div
+            style={{
+              ...styles.featureCardIcon,
+              backgroundColor: '#EFF6FF',
+              color: '#2563EB',
+            }}
+          >
+            <TrainFront size={20} color="#2563EB" />
+          </div>
+          <div>
+            <div style={styles.featureCardTitle}>2. Real-time POI Proximity</div>
+            <p style={styles.featureCardDesc}>
+              Γεωχωρικός υπολογισμός απόστασης από Μετρό, Πανεπιστήμια, Νοσοκομεία και Πάρκα.
+            </p>
+          </div>
+        </div>
+
+        {/* 3. Multimodal Vision Analysis */}
+        <div style={styles.featureCardItem}>
+          <div
+            style={{
+              ...styles.featureCardIcon,
+              backgroundColor: '#FEF3C7',
+              color: '#D97706',
+            }}
+          >
+            <Sparkles size={20} color="#D97706" />
+          </div>
+          <div>
+            <div style={styles.featureCardTitle}>3. Multimodal Vision Analysis</div>
+            <p style={styles.featureCardDesc}>
+              Οπτική ανάλυση φωτογραφιών για ποιότητα υλικών, φωτεινότητα και ανάγκες ανακαίνισης.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
       
         {result && (
