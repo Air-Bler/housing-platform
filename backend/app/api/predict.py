@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from backend.app.services.ml_service import predict_rent_price, get_all_suburbs, get_model_metadata
+from backend.app.services.ml_service import (
+    predict_rent_price, 
+    get_all_suburbs, 
+    get_model_metadata,
+    get_all_suburbs_stats
+)
 
 router = APIRouter()
 
@@ -17,10 +22,16 @@ class PredictRequest(BaseModel):
     furnished: bool = False
     parking: bool = False
     user_asking_price: Optional[float] = None
+    vision_score: Optional[float] = None
 
 @router.get("/suburbs")
 def get_suburbs():
     return {"suburbs": get_all_suburbs()}
+
+@router.get("/suburbs-stats")
+def get_suburbs_stats():
+    """Ζωντανά στατιστικά για τον Χάρτη Τιμών και τα Charts."""
+    return {"suburbs": get_all_suburbs_stats()}
 
 @router.get("/model-stats")
 def get_model_stats():

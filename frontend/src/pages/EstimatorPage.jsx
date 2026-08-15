@@ -186,6 +186,32 @@ export default function EstimatorPage() {
       .then((data) => {
         setVisionResult(data.analysis);
         setVisionLoading(false);
+
+        
+        if (data.analysis && data.analysis.score) {
+          const payload = {
+            ...formData,
+            sqm: parseFloat(formData.sqm),
+            bedrooms: parseInt(formData.bedrooms, 10),
+            bathrooms: parseInt(formData.bathrooms, 10),
+            floor: parseInt(formData.floor, 10),
+            year_built: parseInt(formData.year_built, 10),
+            user_asking_price: formData.user_asking_price ? parseFloat(formData.user_asking_price) : null,
+            vision_score: parseFloat(data.analysis.score) 
+          };
+
+          fetch('http://127.0.0.1:8000/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+            .then((r) => r.json())
+            .then((updatedRes) => {
+              
+              setResult(updatedRes);
+            })
+            .catch((e) => console.error("Vision recalculate error:", e));
+        }
       })
       .catch((err) => {
         console.error("Error analyzing images:", err);
