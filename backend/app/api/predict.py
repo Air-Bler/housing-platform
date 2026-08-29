@@ -1,29 +1,46 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from backend.app.services.ml_service import get_all_suburbs, predict_rent_price
+from typing import Optional
+from backend.app.services.ml_service import (
+    predict_rent_price, 
+    get_all_suburbs, 
+    get_model_metadata,
+    get_all_suburbs_stats
+)
 
 router = APIRouter()
 
-class PropertyInput(BaseModel):
-    sqm: float = 75.0
-    bedrooms: int = 2
-    bathrooms: int = 1
-    floor: int = 2
-    year_built: int = 2010
+class PredictRequest(BaseModel):
     suburb: str
-    elevator: bool = True
+    sqm: float
+    bedrooms: int
+    bathrooms: int
+    floor: int
+    year_built: int
+    elevator: bool = False
     renovated: bool = False
     furnished: bool = False
     parking: bool = False
-    user_asking_price: float = None
+    user_asking_price: Optional[float] = None
+    vision_score: Optional[float] = None
 
 @router.get("/suburbs")
-def get_suburbs_endpoint():
+def get_suburbs():
     return {"suburbs": get_all_suburbs()}
 
+@router.get("/suburbs-stats")
+def get_suburbs_stats():
+    """Ζωντανά στατιστικά για τον Χάρτη Τιμών και τα Charts."""
+    return {"suburbs": get_all_suburbs_stats()}
+
+@router.get("/model-stats")
+def get_model_stats():
+    return get_model_metadata()
+
 @router.post("/predict")
-def predict_endpoint(data: PropertyInput):
+def predict_rent(req: PredictRequest):
     try:
-        return predict_rent_price(data)
+        result = predict_rent_price(req)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
