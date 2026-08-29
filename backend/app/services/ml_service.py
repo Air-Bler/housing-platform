@@ -42,7 +42,7 @@ except Exception:
     DYNAMIC_MAPE = 0.11
 
 
-#   Συντεταγμένες 
+# Γεωγραφικές Συντεταγμένες Σημείων Ενδιαφέροντος (POIs)
 
 METRO_STATIONS = [
     {"name": "Σταθμός Συντάγματος", "lat": 37.9755, "lon": 23.7348},
@@ -157,7 +157,8 @@ def get_all_suburbs():
         return sorted(df['suburb'].dropna().unique().tolist())
     return ["Αμπελόκηποι", "Βύρωνας", "Καλλιθέα", "Νέα Σμύρνη", "Παγκράτι"]
 
-#  Δυναμικά Στατιστικά Μοντέλου 
+# Δυναμικά Στατιστικά Μοντέλου
+
 def get_model_metadata():
     total_listings = len(df) if df is not None and not df.empty else 4162
     accuracy_pct = 88.9
@@ -320,16 +321,40 @@ def predict_rent_price(data):
         except Exception as err:
             print(f"ML predict error: {err}")
 
-    
+    # Heuristic Fallback
     if base_predicted_price is None or base_predicted_price <= 0:
         base_rate = suburb_avg_sqm_price
         year_mult = 1.0 + max(-0.15, min(0.25, (year_built - 1990) * 0.007))
         renov_mult = 1.14 if renovated else 1.0
         furn_mult = 1.10 if furnished else 1.0
-        park_mult = 1.07 if parking else 1.0
-        base_predicted_price = sqm * base_rate * year_mult * renov_mult * furn_mult * park_mult
+        base_predicted_price = sqm * base_rate * year_mult * renov_mult * furn_mult
 
-    # Vision Impact
+    #  Δυναμική & Ευέλικτη Κλιμάκωση Ορόφου & Ασανσέρ
+    if floor <= -1:
+        floor_mult = 0.82
+    elif floor == 0:
+        floor_mult = 0.90
+    else:
+        height_premium = (floor - 1) * 0.025
+        if elevator:
+            floor_mult = 1.0 + height_premium + 0.02
+        else:
+            stair_penalty = (floor - 1) * 0.035
+            floor_mult = max(0.85, 1.0 + height_premium - stair_penalty)
+
+    #  Υπολογισμός Επίδρασης Υπνοδωματίων & Διαρρύθμισης
+    expected_bedrooms = max(1, round((sqm - 20) / 25))
+    bed_diff = bedrooms - expected_bedrooms
+    bedroom_mult = 1.0 + (bed_diff * 0.045)
+    bedroom_mult = max(0.88, min(1.15, bedroom_mult))
+
+    #  Υπολογισμός Επίδρασης Θέσης Parking 
+    parking_mult = 1.08 if parking else 1.00
+
+    
+    base_predicted_price = base_predicted_price * floor_mult * bedroom_mult * parking_mult
+
+    #  Προσαρμογή AI Vision Score (€ Impact)
     vision_delta_eur = 0.0
     if vision_score is not None:
         try:
@@ -346,11 +371,36 @@ def predict_rent_price(data):
 
     predicted_price = max(150.0, base_predicted_price + vision_delta_eur)
 
+    #  Δυναμικό Confidence Interval
     dynamic_delta = max(60.0, round(predicted_price * DYNAMIC_MAPE, 2))
     price_min = max(100.0, round(predicted_price - dynamic_delta, 2))
     price_max = round(predicted_price + dynamic_delta, 2)
 
+    #  Explainability Reasons
     reasons = []
+
+    # Floor & Elevator Reasons
+    if floor <= -1:
+        reasons.append({"type": "negative", "text": "Επίπεδο ημιυπογείου/υπογείου (Μειωμένη εμπορική αξία & φυσικός φωτισμός)"})
+    elif floor == 0:
+        reasons.append({"type": "negative", "text": "Ισόγειο ακίνητο (Χαμηλότερη ζήτηση/μειωμένη ιδιωτικότητα)"})
+    elif floor >= 1 and elevator:
+        reasons.append({"type": "positive", "text": f"{floor}ος όροφος με ανελκυστήρα (Εύκολη πρόσβαση & φυσικό φως)"})
+    elif floor >= 2 and not elevator:
+        reasons.append({"type": "negative", "text": f"{floor}ος όροφος χωρίς ανελκυστήρα (Κλιμακωτή δυσκολία πρόσβασης)"})
+
+    # Bedroom Layout Reasons
+    if bedrooms > expected_bedrooms:
+        reasons.append({"type": "positive", "text": f"Αυξημένος αριθμός υπνοδωματίων ({bedrooms} Υ/Δ) για τα {int(sqm)} τ.μ. (Ευελιξία χώρου/συγκατοίκηση)"})
+    elif bedrooms < expected_bedrooms and sqm >= 65:
+        reasons.append({"type": "negative", "text": f"Περιορισμένος αριθμός υπνοδωματίων ({bedrooms} Υ/Δ) για τα {int(sqm)} τ.μ."})
+
+    # Parking Reason
+    if parking:
+        parking_value_est = int(predicted_price * 0.08)
+        reasons.append({"type": "positive", "text": f"Ιδιωτική θέση στάθμευσης / Parking (+€{parking_value_est}/μήνα)"})
+
+    # POI Reasons
     if suburb_metro_dist <= 800:
         reasons.append({"type": "positive", "text": f"Άμεση πρόσβαση στο {metro_name} ({int(suburb_metro_dist)}m)"})
     elif suburb_metro_dist > 1200:
@@ -365,18 +415,16 @@ def predict_rent_price(data):
     if suburb_hospital_dist <= 1500:
         reasons.append({"type": "positive", "text": f"Πρόσβαση στο {hospital_name} ({round(suburb_hospital_dist/1000, 1)}km)"})
 
+    # Property Features
     if renovated:
         reasons.append({"type": "positive", "text": "Πρόσφατη ανακαίνιση (+Αύξηση αξίας)"})
-    if parking:
-        reasons.append({"type": "positive", "text": "Ύπαρξη θέσης Parking"})
-    if elevator and floor > 1:
-        reasons.append({"type": "positive", "text": "Ύπαρξη ανελκυστήρα σε όροφο"})
 
     if property_age <= 10:
         reasons.append({"type": "positive", "text": f"Νεόδμητο ακίνητο ({year_built})"})
     elif property_age > 40 and not renovated:
         reasons.append({"type": "negative", "text": f"Παλαιότητα κτιρίου ({year_built})"})
 
+    # AI Vision Reason
     if vision_delta_eur > 0:
         reasons.append({"type": "positive", "text": f"Προσαρμογή AI Vision: +€{int(vision_delta_eur)}/μήνα (άριστη οπτική κατάσταση)"})
     elif vision_delta_eur < 0:
