@@ -38,6 +38,7 @@ export default function EstimatorPage() {
     floor: '',
     year_built: '',
     suburb: '',
+    metro_walk_time: 'auto',
     elevator: false,
     renovated: false,
     furnished: false,
@@ -58,7 +59,7 @@ export default function EstimatorPage() {
   const [visionResult, setVisionResult] = useState(null);
   const [visionLoading, setVisionLoading] = useState(false);
 
-  //  Δυναμικά στατιστικά 
+  // Δυναμικά στατιστικά
   const [modelStats, setModelStats] = useState({
     dataset_size: '4.100+',
     model_accuracy: '98.4%',
@@ -68,11 +69,32 @@ export default function EstimatorPage() {
 
   // Φόρτωση Γειτονιών & Στατιστικών Μοντέλου
   useEffect(() => {
+    const EXTRA_SUBURBS = [
+      'Βικτώρια',
+      'Κάτω Πατήσια',
+      'Ομόνοια',
+      'Πλατεία Αμερικής',
+      'Πλατεία Βικτωρίας',
+      'Άγιος Παντελεήμονας',
+      'Πλατεία Κολιάτσου',
+      'Σύνταγμα',
+      'Μοναστηράκι',
+      'Πλάκα',
+      'Θησείο',
+      'Μουσείο',
+      'Νεάπολη',
+      'Γκύζη',
+      'Πολύγωνο'
+    ];
+
     loadCityStats()
       .then((stats) => {
         if (stats && stats.chartData) {
-          const list = stats.chartData.map((n) => n.name).sort();
-          setSuburbs(list);
+          const baseList = stats.chartData.map((n) => n.name);
+          const fullList = Array.from(new Set([...baseList, ...EXTRA_SUBURBS])).sort((a, b) =>
+            a.localeCompare(b, 'el')
+          );
+          setSuburbs(fullList);
         }
       })
       .catch((err) => {
@@ -187,17 +209,21 @@ export default function EstimatorPage() {
         setVisionResult(data.analysis);
         setVisionLoading(false);
 
-        
         if (data.analysis && data.analysis.score) {
           const payload = {
-            ...formData,
+            suburb: formData.suburb,
             sqm: parseFloat(formData.sqm),
             bedrooms: parseInt(formData.bedrooms, 10),
             bathrooms: parseInt(formData.bathrooms, 10),
             floor: parseInt(formData.floor, 10),
             year_built: parseInt(formData.year_built, 10),
+            metro_walk_time: formData.metro_walk_time || 'auto',
+            elevator: !!formData.elevator,
+            renovated: !!formData.renovated,
+            furnished: !!formData.furnished,
+            parking: !!formData.parking,
             user_asking_price: formData.user_asking_price ? parseFloat(formData.user_asking_price) : null,
-            vision_score: parseFloat(data.analysis.score) 
+            vision_score: parseFloat(data.analysis.score)
           };
 
           fetch('http://127.0.0.1:8000/api/predict', {
@@ -207,7 +233,6 @@ export default function EstimatorPage() {
           })
             .then((r) => r.json())
             .then((updatedRes) => {
-              
               setResult(updatedRes);
             })
             .catch((e) => console.error("Vision recalculate error:", e));
@@ -233,12 +258,17 @@ export default function EstimatorPage() {
     if (images.length > 0) setVisionLoading(true);
 
     const payload = {
-      ...formData,
+      suburb: formData.suburb,
       sqm: parseFloat(formData.sqm),
       bedrooms: parseInt(formData.bedrooms, 10),
       bathrooms: parseInt(formData.bathrooms, 10),
       floor: parseInt(formData.floor, 10),
       year_built: parseInt(formData.year_built, 10),
+      metro_walk_time: formData.metro_walk_time || 'auto',
+      elevator: !!formData.elevator,
+      renovated: !!formData.renovated,
+      furnished: !!formData.furnished,
+      parking: !!formData.parking,
       user_asking_price: formData.user_asking_price ? parseFloat(formData.user_asking_price) : null,
     };
 
@@ -312,7 +342,7 @@ export default function EstimatorPage() {
 
       {/* Main Layout */}
       <div style={styles.mainLayout}>
-        {/*  Φόρμα */}
+        {/* Φόρμα */}
         <form onSubmit={handleSubmit} style={styles.formCard} noValidate>
           <div style={styles.sectionBlock}>
             <div style={styles.sectionHeader}>
@@ -338,6 +368,27 @@ export default function EstimatorPage() {
                 ))}
               </select>
               {formErrors.suburb && <span style={styles.errorText}>{formErrors.suburb}</span>}
+            </div>
+
+            <div style={{ ...styles.field, marginTop: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                <TrainFront size={16} color="#0F766E" />
+                <label style={{ ...styles.label, marginBottom: 0 }}>
+                  Απόσταση από Μετρό / ΗΣΑΠ (με τα πόδια)
+                </label>
+              </div>
+              <select
+                name="metro_walk_time"
+                value={formData.metro_walk_time}
+                onChange={handleChange}
+                style={styles.selectInput}
+              >
+                <option value="auto">Αυτόματος υπολογισμός βάσει γειτονιάς</option>
+                <option value="under_5">Έως 5 λεπτά (&lt; 400m) — Δίπλα σε σταθμό</option>
+                <option value="5_10">5 - 10 λεπτά (400m - 800m) — Άμεση πρόσβαση</option>
+                <option value="10_15">10 - 15 λεπτά (800m - 1.2km) — Μέτρια απόσταση</option>
+                <option value="over_15">Πάνω από 15 λεπτά / Χωρίς άμεσο Μετρό (&gt; 1.2km)</option>
+              </select>
             </div>
           </div>
 
@@ -529,7 +580,7 @@ export default function EstimatorPage() {
           </div>
         </form>
 
-        {/* Δεξιά Στήλη: Onboarding Panel  */}
+        {/* Δεξιά Στήλη: Onboarding Panel */}
         {!result && (
           <div style={styles.previewColumn}>
             <div style={styles.previewHeroCard}>
@@ -538,7 +589,6 @@ export default function EstimatorPage() {
                 Συνδυάζουμε αλγοριθμική μηχανική μάθηση (Machine Learning) με πραγματικά δεδομένα 4.100+ αγγελιών και προηγμένη όραση AI για να προσφέρουμε αντικειμενική εικόνα αγοράς.
               </p>
 
-              
               <div style={styles.statsMiniRow}>
                 <div style={styles.statBoxGreen}>
                   <span style={styles.statLabelColored}>Δείγμα Αγγελιών</span>
@@ -591,7 +641,7 @@ export default function EstimatorPage() {
           </div>
         )}
 
-        {/*  Αποτελέσματα */}
+        {/* Αποτελέσματα */}
         {result && (
           <div style={styles.resultsColumn}>
             <div style={styles.resultsWrapper}>
@@ -654,14 +704,14 @@ export default function EstimatorPage() {
                 )}
               </div>
 
-              {/*  AI Vision Modular Card */}
+              {/* AI Vision Modular Card */}
               <VisionAnalysisCard
                 imagesCount={images.length}
                 visionLoading={visionLoading}
                 visionResult={visionResult}
               />
 
-              {/*  Deal Value Score Card */}
+              {/* Deal Value Score Card */}
               <div style={styles.valueScoreCard}>
                 <div style={styles.valueScoreHeader}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -700,10 +750,10 @@ export default function EstimatorPage() {
                 </div>
               </div>
 
-              {/*  Κοντινές Υποδομές & POIs */}
+              {/* Κοντινές Υποδομές & POIs */}
               <PoiDistanceList poiDistances={result.poi_distances} />
 
-              {/*  Μέσες Τιμές Περιοχής */}
+              {/* Μέσες Τιμές Περιοχής */}
               {result.suburb_stats && (
                 <div style={styles.infoCard}>
                   <div style={styles.cardHeaderFlex}>
@@ -727,7 +777,7 @@ export default function EstimatorPage() {
                 </div>
               )}
 
-              {/*  Παράγοντες Διάμορφωσης Τιμής */}
+              {/* Παράγοντες Διάμορφωσης Τιμής */}
               {result.reasons && result.reasons.length > 0 && (
                 <div style={styles.infoCard}>
                   <h4 style={styles.infoCardTitle}>Παράγοντες Διάμορφωσης Τιμής</h4>

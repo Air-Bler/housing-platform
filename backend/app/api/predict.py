@@ -17,6 +17,7 @@ class PredictRequest(BaseModel):
     bathrooms: int
     floor: int
     year_built: int
+    metro_walk_time: Optional[str] = "auto"  
     elevator: bool = False
     renovated: bool = False
     furnished: bool = False

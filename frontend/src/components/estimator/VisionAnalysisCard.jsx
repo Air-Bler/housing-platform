@@ -7,6 +7,8 @@ export default function VisionAnalysisCard({ visionLoading, visionResult }) {
     return null;
   }
 
+  const isHighQuality = visionResult && visionResult.score >= 8.8;
+
   return (
     <div style={styles.visionCard}>
       <div style={styles.visionCardHeader}>
@@ -22,7 +24,7 @@ export default function VisionAnalysisCard({ visionLoading, visionResult }) {
         )}
       </div>
 
-      {/* 🔄 Spinner φόρτωσης */}
+      {/* Spinner φόρτωσης */}
       {visionLoading && (
         <div style={styles.loaderContainer}>
           <Loader2 size={28} color="#0F766E" className="spin" />
@@ -59,11 +61,20 @@ export default function VisionAnalysisCard({ visionLoading, visionResult }) {
 
           {visionResult.observations && visionResult.observations.length > 0 && (
             <div style={styles.visionListBlock}>
-              <span style={styles.listBlockTitle}>Σημεία Προσοχής & Προτάσεις Ανακαίνισης:</span>
+              <span style={styles.listBlockTitle}>
+                {isHighQuality ? "Κατάσταση Χώρων:" : "Σημεία Προσοχής & Προτάσεις Ανακαίνισης:"}
+              </span>
               <ul style={styles.visionList}>
                 {visionResult.observations.map((obs, i) => (
-                  <li key={i} style={styles.visionListItemObservation}>
-                    <AlertCircle size={15} color="#C98A3E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <li 
+                    key={i} 
+                    style={isHighQuality ? styles.visionListItemPositive : styles.visionListItemObservation}
+                  >
+                    {isHighQuality ? (
+                      <CheckCircle2 size={15} color="#0F766E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    ) : (
+                      <AlertCircle size={15} color="#C98A3E" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    )}
                     <span>{obs}</span>
                   </li>
                 ))}

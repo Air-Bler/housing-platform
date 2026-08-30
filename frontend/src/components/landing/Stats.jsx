@@ -61,7 +61,7 @@ export default function Stats() {
                 bg="#EAF2F1"
                 number={stats.totalProperties.toLocaleString("el-GR")}
                 label="Ακίνητα αναλύθηκαν"
-                sub="Πραγματικές αγγελίες, όχι εκτιμήσεις"
+                sub="Πραγματικές αγγελίες"
               />
               <StatCard
                 accent="#4C7A6D"
