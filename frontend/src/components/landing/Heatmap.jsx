@@ -13,7 +13,6 @@ export default function Heatmap() {
 
     let cancelled = false;
 
-    
     const map = L.map(mapRef.current, {
       center: [37.9838, 23.7275],
       zoom: 11.5,
@@ -23,13 +22,11 @@ export default function Heatmap() {
 
     mapInstanceRef.current = map;
 
-    // OpenStreetMap
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors",
       maxZoom: 19,
     }).addTo(map);
 
-    
     loadAthensData()
       .then((athensData) => {
         if (cancelled) return;
@@ -39,7 +36,6 @@ export default function Heatmap() {
           return;
         }
 
-        
         athensData.forEach((area) => {
           const radius = Number(area.radius);
 
@@ -50,11 +46,9 @@ export default function Heatmap() {
             !Number.isFinite(Number(area.position[1])) ||
             !Number.isFinite(radius)
           ) {
-            console.warn("Μη έγκυρο area:", area);
             return;
           }
 
-       
           L.circle(area.position, {
             radius,
             stroke: true,
@@ -66,7 +60,6 @@ export default function Heatmap() {
             interactive: false,
           }).addTo(map);
 
-          
           if (area.showLabel) {
             L.marker(area.position, {
               interactive: false,
@@ -100,12 +93,9 @@ export default function Heatmap() {
           }
         });
 
-        // Legend
         const legend = L.control({ position: "bottomright" });
-
         legend.onAdd = () => {
           const div = L.DomUtil.create("div", "athens-heatmap-legend");
-
           div.innerHTML = `
             <div style="
               background: rgba(255,255,255,.95);
@@ -115,44 +105,38 @@ export default function Heatmap() {
               font-family: Arial, sans-serif;
               font-size: 11px;
               color: #16212B;
-              min-width: 135px;
+              min-width: 140px;
             ">
               <div style="font-weight: 700; margin-bottom: 8px;">
                 Ενδεικτικό ενοίκιο €/m²
               </div>
               <div style="display: flex; align-items: center; margin-bottom: 5px;">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#B33F30;margin-right:6px;"></span>
-                Ακριβό
+                Ακριβό (&gt; €14.0)
               </div>
               <div style="display: flex; align-items: center; margin-bottom: 5px;">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#C98A3E;margin-right:6px;"></span>
-                Μεσαίο
+                Μεσαίο (€10.5 - €14.0)
               </div>
               <div style="display: flex; align-items: center;">
                 <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4C7A6D;margin-right:6px;"></span>
-                Προσιτό
+                Προσιτό (&lt; €10.5)
               </div>
             </div>
           `;
-
           return div;
         };
-
         legend.addTo(map);
 
-        
         setTimeout(() => {
-          if (!cancelled) {
-            map.invalidateSize();
-          }
+          if (!cancelled) map.invalidateSize();
         }, 100);
       })
       .catch((error) => {
         if (cancelled) return;
-        console.error("Αποτυχία φόρτωσης cleaned_properties.csv:", error);
+        console.error("Αποτυχία φόρτωσης δεδομένων χάρτη:", error);
       });
 
-    // Cleanup
     return () => {
       cancelled = true;
       if (mapInstanceRef.current) {
