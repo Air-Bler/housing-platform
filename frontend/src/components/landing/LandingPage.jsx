@@ -1,17 +1,16 @@
-import Hero from "./Hero";
-import Stats from "./Stats";
-import Problem from "./Problem";
-import Features from "./Features";
-import Footer from "./Footer";
+import React from 'react';
+import Hero from './Hero';
+import Problem from './Problem';
+import Features from './Features';
+import Footer from './Footer';
 
 export default function LandingPage() {
   return (
-    <>
+    <div style={{ backgroundColor: '#FDFBF7', minHeight: '100vh' }}>
       <Hero />
-      <Stats />
       <Problem />
       <Features />
       <Footer />
-    </>
+    </div>
   );
 }
