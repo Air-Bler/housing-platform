@@ -18,7 +18,6 @@ export default function InteractiveMap({
   const mapInstanceRef = useRef(null);
   const layersGroupRef = useRef(null);
 
-  // Κρατάμε πάντα την τρέχουσα αναφορά του onSelectSuburb
   const onSelectSuburbRef = useRef(onSelectSuburb);
   useEffect(() => {
     onSelectSuburbRef.current = onSelectSuburb;

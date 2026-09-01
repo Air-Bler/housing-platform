@@ -30,7 +30,7 @@ export default function SuburbComparator({ suburbs }) {
       <div style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           
-          <h3 style={styles.title}>Σύγκριση Περιοχών</h3>
+          <h3 style={styles.title}>Σύγκριση Περιοχών</h3>   
         </div>
        
       </div>
