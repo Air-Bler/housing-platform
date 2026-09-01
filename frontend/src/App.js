@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 
 import LandingPage from "./pages/LandingPage";
 import EstimatorPage from "./pages/EstimatorPage";
+import PriceMapPage from "./pages/PriceMapPage";
 
 function App() {
   return (
@@ -12,7 +13,6 @@ function App() {
       <Navbar />
 
       <Routes>
-
         <Route path="/" element={<LandingPage />} />
 
         <Route path="/estimator" element={<EstimatorPage />} />
@@ -26,15 +26,9 @@ function App() {
           }
         />
 
-        <Route
-          path="/heatmap"
-          element={
-            <div style={{ padding: "2rem" }}>
-              <h2>Interactive Heatmap (Coming Soon)</h2>
-            </div>
-          }
-        />
-
+        <Route path="/heatmap" element={<PriceMapPage />} />
+        <Route path="/prices" element={<PriceMapPage />} />
+        <Route path="/map" element={<PriceMapPage />} />
       </Routes>
     </Router>
   );
