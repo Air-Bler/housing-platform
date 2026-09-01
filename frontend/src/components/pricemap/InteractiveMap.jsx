@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, Layers, Info, SearchX } from 'lucide-react';
+import { getMarkerColor, PRICE_TIERS } from '../landing/Common';
 
 export default function InteractiveMap({
   suburbs,
@@ -22,13 +23,6 @@ export default function InteractiveMap({
   useEffect(() => {
     onSelectSuburbRef.current = onSelectSuburb;
   }, [onSelectSuburb]);
-
-  const getMarkerColor = (price) => {
-    const val = Number(price) || 0;
-    if (val >= 14.0) return '#B33F30';
-    if (val >= 10.5) return '#C98A3E';
-    return '#4C7A6D';
-  };
 
   const getRadiusMeters = (count) => {
     const c = Number(count) || 20;
@@ -201,7 +195,7 @@ export default function InteractiveMap({
             onClick={() => setTierFilter('BUDGET')}
             style={{
               ...styles.tierBtn,
-              ...(tierFilter === 'BUDGET' ? { ...styles.tierBtnActive, borderColor: '#4C7A6D', color: '#4C7A6D' } : {})
+              ...(tierFilter === 'BUDGET' ? { ...styles.tierBtnActive, borderColor: PRICE_TIERS.COLORS.BUDGET, color: PRICE_TIERS.COLORS.BUDGET } : {})
             }}
           >
             Προσιτές (&lt;10.5€)
@@ -210,7 +204,7 @@ export default function InteractiveMap({
             onClick={() => setTierFilter('MID')}
             style={{
               ...styles.tierBtn,
-              ...(tierFilter === 'MID' ? { ...styles.tierBtnActive, borderColor: '#C98A3E', color: '#C98A3E' } : {})
+              ...(tierFilter === 'MID' ? { ...styles.tierBtnActive, borderColor: PRICE_TIERS.COLORS.MID, color: PRICE_TIERS.COLORS.MID } : {})
             }}
           >
             Μεσαίες (10.5-14€)
@@ -219,7 +213,7 @@ export default function InteractiveMap({
             onClick={() => setTierFilter('PREMIUM')}
             style={{
               ...styles.tierBtn,
-              ...(tierFilter === 'PREMIUM' ? { ...styles.tierBtnActive, borderColor: '#B33F30', color: '#B33F30' } : {})
+              ...(tierFilter === 'PREMIUM' ? { ...styles.tierBtnActive, borderColor: PRICE_TIERS.COLORS.PREMIUM, color: PRICE_TIERS.COLORS.PREMIUM } : {})
             }}
           >
             Premium (&gt;14€)
@@ -272,15 +266,15 @@ export default function InteractiveMap({
           </div>
           <div style={styles.legendRow}>
             <div style={styles.legendItem}>
-              <span style={{ ...styles.legendDot, backgroundColor: '#4C7A6D' }} />
+              <span style={{ ...styles.legendDot, backgroundColor: PRICE_TIERS.COLORS.BUDGET }} />
               <span>Προσιτό (&lt; €10.5)</span>
             </div>
             <div style={styles.legendItem}>
-              <span style={{ ...styles.legendDot, backgroundColor: '#C98A3E' }} />
+              <span style={{ ...styles.legendDot, backgroundColor: PRICE_TIERS.COLORS.MID }} />
               <span>Μεσαίο (€10.5 - €14.0)</span>
             </div>
             <div style={styles.legendItem}>
-              <span style={{ ...styles.legendDot, backgroundColor: '#B33F30' }} />
+              <span style={{ ...styles.legendDot, backgroundColor: PRICE_TIERS.COLORS.PREMIUM }} />
               <span>Ακριβό (&gt; €14.0)</span>
             </div>
           </div>
