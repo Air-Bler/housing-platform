@@ -73,14 +73,16 @@ export default function InteractiveMap({
     layersGroupRef.current.clearLayers();
 
     suburbs.forEach((sub) => {
-      if (!sub.lat || !sub.lon) return;
+      const lat = parseFloat(sub.lat || sub.latitude);
+      const lon = parseFloat(sub.lon || sub.lng || sub.longitude);
+      if (!lat || !lon) return;
 
-      const count = Number(sub.listingsCount || 0);
+      const count = Number(sub.listingsCount || sub.count || 0);
       const color = getMarkerColor(sub.avgSqmPrice);
       const radius = getRadiusMeters(count);
       const formattedPrice = Number(sub.avgSqmPrice || 0).toFixed(1);
 
-      const circle = L.circle([sub.lat, sub.lon], {
+      const circle = L.circle([lat, lon], {
         radius: radius,
         stroke: true,
         color: color,
@@ -117,7 +119,7 @@ export default function InteractiveMap({
         iconAnchor: [0, 0],
       });
 
-      const labelMarker = L.marker([sub.lat, sub.lon], { icon: pillIcon });
+      const labelMarker = L.marker([lat, lon], { icon: pillIcon });
 
       const popupHtml = `
         <div style="font-family: Arial, sans-serif; min-width: 175px; padding: 4px;">
@@ -266,7 +268,7 @@ export default function InteractiveMap({
 
         <div style={styles.legendCard}>
           <div style={styles.legendTitle}>
-            <Info size={13} color="#6B7280" /> Ενδεικτικό ενοίκιο €/m² 
+            <Info size={13} color="#6B7280" /> Ενδεικτικό ενοίκιο €/m²
           </div>
           <div style={styles.legendRow}>
             <div style={styles.legendItem}>

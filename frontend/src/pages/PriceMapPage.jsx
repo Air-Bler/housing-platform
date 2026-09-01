@@ -45,22 +45,39 @@ export default function PriceMapPage() {
           let rawList = [];
           if (backendList.length > 0) {
             rawList = backendList;
-          } else if (cityStats && cityStats.chartData) {
-            rawList = cityStats.chartData.map((c) => ({
-              name: c.name,
-              avgSqmPrice: Number(c.pricePerSqm || c.avgPriceSqm || c.avgPrice || 11.5),
-              avgRent: Number(c.avgRent || 650),
-              minRent: Number(c.minRent || 350),
-              maxRent: Number(c.maxRent || 1200),
-              listingsCount: Number(c.listingsCount || 30),
-              lat: Number(c.lat || 37.9838),
-              lon: Number(c.lon || 23.7275),
-            }));
+          } else if (cityStats) {
+            rawList = cityStats.chartData || cityStats.suburbs || [];
           }
 
-          const validSuburbs = rawList.filter(
-            (sub) => Number(sub.listingsCount || 0) >= 15
-          );
+          
+          const normalizedList = rawList.map((c) => {
+            const name = c.name || c.suburb || c.neighborhood || '';
+            const lat = parseFloat(c.lat || c.latitude || c.location?.lat || 0);
+            const lon = parseFloat(c.lon || c.lng || c.longitude || c.location?.lon || 0);
+            const count = parseInt(c.listingsCount || c.count || c.totalListings || c.total_listings || 20, 10);
+            const avgSqmPrice = parseFloat(c.avgSqmPrice || c.pricePerSqm || c.avgPriceSqm || c.avgPrice || 11.5);
+            const avgRent = parseFloat(c.avgRent || c.meanRent || c.average_rent || 650);
+            const minRent = parseFloat(c.minRent || c.min_rent || 350);
+            const maxRent = parseFloat(c.maxRent || c.max_rent || 1200);
+
+            return {
+              name,
+              lat,
+              lon,
+              listingsCount: count,
+              avgSqmPrice,
+              avgRent,
+              minRent,
+              maxRent,
+            };
+          });
+
+    
+          const validSuburbs = normalizedList.filter((sub) => {
+            const hasValidCoords = !isNaN(sub.lat) && !isNaN(sub.lon) && sub.lat !== 0 && sub.lon !== 0;
+            const hasSufficientData = sub.listingsCount >= 15 || sub.listingsCount === 0;
+            return hasValidCoords && hasSufficientData && sub.name.trim() !== '';
+          });
 
           setSuburbsData(validSuburbs);
         }
@@ -179,7 +196,6 @@ export default function PriceMapPage() {
 
       <SuburbRankings benchmarks={dynamicBenchmarks} />
 
-   
       {suburbsData.length >= 2 && (
         <SuburbComparator suburbs={suburbsData} />
       )}

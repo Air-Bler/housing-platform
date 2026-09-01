@@ -4,7 +4,7 @@ import { AlertTriangle, Compass } from 'lucide-react';
 export default function Problem() {
   return (
     <section style={styles.section}>
-      <div style={styles.container}>
+      <div style={styles.container}>git 
         
         {/* Header */}
         <div style={styles.header}>
