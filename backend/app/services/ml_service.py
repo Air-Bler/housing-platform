@@ -479,11 +479,11 @@ def predict_rent_price(data):
     if metro_walk_time == 'under_5':
         metro_mult = 1.08  
         safe_metro_dist = 280
-        metro_reason_text = f"Εξαιρετική τοποθεσία: Έως 5 λεπτά με τα πόδια από το {metro_name} (+8% premium ζήτησης)"
+        metro_reason_text = f"Εξαιρετική τοποθεσία: Έως 5 λεπτά με τα πόδια από το {metro_name}"
     elif metro_walk_time == '5_10':
         metro_mult = 1.04  
         safe_metro_dist = 600
-        metro_reason_text = f"Άμεση πρόσβαση: 5-10 λεπτά με τα πόδια από το {metro_name} (+4% premium)"
+        metro_reason_text = f"Άμεση πρόσβαση: 5-10 λεπτά με τα πόδια από το {metro_name}"
     elif metro_walk_time == '10_15':
         metro_mult = 1.00  
         safe_metro_dist = 1000
