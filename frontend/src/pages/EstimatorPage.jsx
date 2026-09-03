@@ -53,13 +53,11 @@ export default function EstimatorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // States Φωτογραφιών & AI Vision
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [visionResult, setVisionResult] = useState(null);
   const [visionLoading, setVisionLoading] = useState(false);
 
-  // Δυναμικά στατιστικά
   const [modelStats, setModelStats] = useState({
     dataset_size: '4.100+',
     model_accuracy: '98.4%',
@@ -67,7 +65,6 @@ export default function EstimatorPage() {
 
   const cleanName = (raw) => (raw ? raw.split('(')[0].split('-')[0].split('–')[0].trim() : '');
 
-  // Φόρτωση Γειτονιών & Στατιστικών Μοντέλου
   useEffect(() => {
     const EXTRA_SUBURBS = [
       'Βικτώρια',
@@ -325,7 +322,6 @@ export default function EstimatorPage() {
         }
       `}</style>
 
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Fair Rent Estimator</h1>
         <p style={styles.subtitle}>
@@ -340,9 +336,7 @@ export default function EstimatorPage() {
         </div>
       )}
 
-      {/* Main Layout */}
       <div style={styles.mainLayout}>
-        {/* Φόρμα */}
         <form onSubmit={handleSubmit} style={styles.formCard} noValidate>
           <div style={styles.sectionBlock}>
             <div style={styles.sectionHeader}>
@@ -532,7 +526,6 @@ export default function EstimatorPage() {
 
           <hr style={styles.divider} />
 
-          {/* Drag & Drop Φωτογραφιών */}
           <div style={styles.sectionBlock}>
             <div style={styles.sectionHeader}>
               <ImageIcon size={18} color="#0F766E" />
@@ -580,13 +573,13 @@ export default function EstimatorPage() {
           </div>
         </form>
 
-        {/* Δεξιά Στήλη: Onboarding Panel */}
         {!result && (
           <div style={styles.previewColumn}>
             <div style={styles.previewHeroCard}>
-              <h3 style={styles.previewHeroTitle}>Πώς λειτουργεί η AI Εκτίμηση;</h3>
+              <h3 style={styles.previewHeroTitle}>Πώς υπολογίζουμε την εκτίμηση</h3>
               <p style={styles.previewHeroText}>
-                Συνδυάζουμε αλγοριθμική μηχανική μάθηση (Machine Learning) με πραγματικά δεδομένα 4.100+ αγγελιών και προηγμένη όραση AI για να προσφέρουμε αντικειμενική εικόνα αγοράς.
+                Η εκτίμηση βασίζεται σε πραγματικά δεδομένα ενοικίασης από όλη την Αθήνα, τα χαρακτηριστικά
+                του συγκεκριμένου ακινήτου, και την κατάστασή του.
               </p>
 
               <div style={styles.statsMiniRow}>
@@ -603,12 +596,12 @@ export default function EstimatorPage() {
               <div style={styles.featureCardsList}>
                 <div style={styles.featureCardItem}>
                   <div style={styles.featureCardIcon}>
-                    <BrainCircuit size={18} color="#0F766E" />
+                    <Home size={18} color="#0F766E" />
                   </div>
                   <div>
-                    <div style={styles.featureCardTitle}>1. Machine Learning Valuation</div>
+                    <div style={styles.featureCardTitle}>Χαρακτηριστικά ακινήτου</div>
                     <p style={styles.featureCardDesc}>
-                      Υπολογισμός δίκαιης τιμής & εύρους βάσει m², ορόφου, έτους και παροχών.
+                      Τετραγωνικά, όροφος, έτος κατασκευής, και  παροχές είναι τα βασικά που καθορίζουν μια δίκαιη τιμή.
                     </p>
                   </div>
                 </div>
@@ -618,21 +611,21 @@ export default function EstimatorPage() {
                     <TrainFront size={18} color="#0F766E" />
                   </div>
                   <div>
-                    <div style={styles.featureCardTitle}>2. Real-time POI Proximity</div>
+                    <div style={styles.featureCardTitle}>Απόσταση από υποδομές</div>
                     <p style={styles.featureCardDesc}>
-                      Αυτόματος υπολογισμός απόστασης από Μετρό, Πανεπιστήμια, Νοσοκομεία και Πάρκα.
+                      Μετρό, πανεπιστήμια, νοσοκομεία και πάρκα κοντά στη γειτονιά που επέλεξες.
                     </p>
                   </div>
                 </div>
 
                 <div style={styles.featureCardItem}>
                   <div style={styles.featureCardIcon}>
-                    <Sparkles size={18} color="#0F766E" />
+                    <ImageIcon size={18} color="#0F766E" />
                   </div>
                   <div>
-                    <div style={styles.featureCardTitle}>3. Multimodal Vision Analysis</div>
+                    <div style={styles.featureCardTitle}>Φωτογραφίες (προαιρετικό)</div>
                     <p style={styles.featureCardDesc}>
-                      Οπτική αξιολόγηση φωτογραφιών για εντοπισμό ποιότητας υλικών και αναγκών ανακαίνισης.
+                      Αν ανεβάσεις φωτογραφίες, εκτιμούμε την κατάσταση του ακινήτου και προσαρμόζουμε ανάλογα την τιμή.
                     </p>
                   </div>
                 </div>
@@ -641,11 +634,9 @@ export default function EstimatorPage() {
           </div>
         )}
 
-        {/* Αποτελέσματα */}
         {result && (
           <div style={styles.resultsColumn}>
             <div style={styles.resultsWrapper}>
-              {/* Premium Main Estimate Card */}
               <div style={styles.mainEstimateCard}>
                 <div style={styles.cardHeaderRow}>
                   <span style={styles.mainEstimateLabel}>
@@ -704,14 +695,12 @@ export default function EstimatorPage() {
                 )}
               </div>
 
-              {/* AI Vision Modular Card */}
               <VisionAnalysisCard
                 imagesCount={images.length}
                 visionLoading={visionLoading}
                 visionResult={visionResult}
               />
 
-              {/* Deal Value Score Card */}
               <div style={styles.valueScoreCard}>
                 <div style={styles.valueScoreHeader}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -750,10 +739,8 @@ export default function EstimatorPage() {
                 </div>
               </div>
 
-              {/* Κοντινές Υποδομές & POIs */}
               <PoiDistanceList poiDistances={result.poi_distances} />
 
-              {/* Μέσες Τιμές Περιοχής */}
               {result.suburb_stats && (
                 <div style={styles.infoCard}>
                   <div style={styles.cardHeaderFlex}>
@@ -777,7 +764,6 @@ export default function EstimatorPage() {
                 </div>
               )}
 
-              {/* Παράγοντες Διάμορφωσης Τιμής */}
               {result.reasons && result.reasons.length > 0 && (
                 <div style={styles.infoCard}>
                   <h4 style={styles.infoCardTitle}>Παράγοντες Διάμορφωσης Τιμής</h4>

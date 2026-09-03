@@ -5,40 +5,27 @@ import { useNavigate } from 'react-router-dom';
 export default function Features() {
   const navigate = useNavigate();
 
-  const featuresList = [
+  const secondaryFeatures = [
     {
-      icon: <Calculator size={24} color="#0F766E" />,
-      tag: "ΓΙΑ ΕΝΟΙΚΙΑΣΤΕΣ & ΙΔΙΟΚΤΗΤΕΣ",
-      title: "Fair Rent Estimator",
-      desc: "Εκτιμήστε άμεσα τη δίκαιη τιμή ενοικίασης βάσει τετραγωνικών, ορόφου, έτους κατασκευής και απόστασης απο υπηρεσίες.",
-      points: ["Ανάλυση πραγματικών δεδομένων", "Εκτίμηση εύρους μισθώματος", "Σύγκριση με μέσο όρο γειτονιάς"],
-      link: "/estimator",
-      btnText: "Υπολογισμός Ενοικίου",
-      accent: "#0F766E",
-      bg: "#EAF2F1"
-    },
-    {
-      icon: <Hammer size={24} color="#C98A3E" />,
+      icon: <Hammer size={20} color="#C98A3E" />,
       tag: "ΓΙΑ ΕΠΕΝΔΥΤΕΣ & ΙΔΙΟΚΤΗΤΕΣ",
       title: "Renovation ROI & Vision",
-      desc: "Υπολογίστε αν σας συμφέρει να ανακαινίσετε το ακίνητό σας και ανεβάστε φωτογραφίες για έξυπνη ανάλυση κατάστασης.",
-      points: ["Εκτίμηση αύξησης ενοικίου", "Υπολογισμός απόσβεσης κόστους", "Vision AI ανάλυση φωτογραφιών"],
+      desc: "Δες αν σου συμφέρει να ανακαινίσεις, με εκτίμηση αύξησης ενοικίου και ανάλυση φωτογραφιών.",
       link: "/roi",
-      btnText: "Ανάλυση Ανακαίνισης",
+      linkText: "Ανάλυση Ανακαίνισης",
       accent: "#C98A3E",
-      bg: "#FDF6EC"
+      bg: "#FDF6EC",
     },
     {
-      icon: <MapPin size={24} color="#B33F30" />,
+      icon: <MapPin size={20} color="#B33F30" />,
       tag: "ΕΡΕΥΝΑ ΑΓΟΡΑΣ",
       title: "Διαδραστικός Χάρτης Τιμών",
-      desc: "Εξερευνήστε τις πραγματικές τιμές ανά m² σε όλη την Αττική, συγκρίνετε γειτονιές και δείτε αναλυτικά rankings.",
-      points: ["Heatmap 60+ αξιόπιστων γειτονιών", "Σύγκριση γειτονιών", "Διαδραστικά γραφήματα τιμών"],
+      desc: "Πραγματικές τιμές ανά m² σε 60+ γειτονιές της Αττικής, με άμεση σύγκριση μεταξύ τους.",
       link: "/prices",
-      btnText: "Άνοιγμα Χάρτη",
+      linkText: "Άνοιγμα Χάρτη",
       accent: "#B33F30",
-      bg: "#FBEAE7"
-    }
+      bg: "#FBEAE7",
+    },
   ];
 
   return (
@@ -52,46 +39,52 @@ export default function Features() {
           </p>
         </div>
 
-        <div style={styles.grid}>
-          {featuresList.map((f, idx) => (
-            <div
-              key={idx}
-              style={styles.card}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.03)';
-              }}
-            >
-              <div style={styles.cardTop}>
-                <div style={{ ...styles.iconWrapper, backgroundColor: f.bg }}>
-                  {f.icon}
-                </div>
+        
+        <div style={styles.featuredCard}>
+          <div style={styles.featuredText}>
+            <div style={{ ...styles.iconWrapper, backgroundColor: '#EAF2F1' }}>
+              <Calculator size={24} color="#0F766E" />
+            </div>
+            <span style={{ ...styles.tag, color: '#0F766E' }}>ΓΙΑ ΕΝΟΙΚΙΑΣΤΕΣ & ΙΔΙΟΚΤΗΤΕΣ</span>
+            <h3 style={styles.featuredTitle}>Fair Rent Estimator</h3>
+            <p style={styles.featuredDesc}>
+              Εκτίμησε άμεσα τη δίκαιη τιμή ενοικίασης βάσει τετραγωνικών, ορόφου, έτους κατασκευής και
+              απόστασης από υπηρεσίες, με σύγκριση στον μέσο όρο της γειτονιάς.
+            </p>
+            <button onClick={() => navigate('/estimator')} style={{ ...styles.btn, backgroundColor: '#0F766E' }}>
+              <span>Υπολογισμός Ενοικίου</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+
+        
+          <div style={styles.previewWrap}>
+            <div style={styles.previewCard}>
+              <div style={styles.previewTopRow}>
+                <span style={styles.previewLabel}>FAIR RENT ESTIMATE</span>
+                <span style={styles.confidencePill}>89% confidence</span>
+              </div>
+              <div style={styles.previewPrice}>
+                €657<span style={styles.previewPriceUnit}>/μήνα</span>
+              </div>
+              <div style={styles.previewSub}>Εύρος €583 – €732 · Καλλιθέα</div>
+            </div>
+          </div>
+        </div>
+
+      
+        <div style={styles.secondaryGrid}>
+          {secondaryFeatures.map((f, idx) => (
+            <div key={idx} style={styles.secondaryCard}>
+              <div style={{ ...styles.iconWrapperSm, backgroundColor: f.bg }}>{f.icon}</div>
+              <div>
                 <span style={{ ...styles.tag, color: f.accent }}>{f.tag}</span>
+                <h4 style={styles.secondaryTitle}>{f.title}</h4>
+                <p style={styles.secondaryDesc}>{f.desc}</p>
+                <button onClick={() => navigate(f.link)} style={{ ...styles.linkBtn, color: f.accent }}>
+                  {f.linkText} <ArrowRight size={14} />
+                </button>
               </div>
-
-              <h3 style={styles.cardTitle}>{f.title}</h3>
-              <p style={styles.cardDesc}>{f.desc}</p>
-
-              <div style={styles.pointsList}>
-                {f.points.map((p, pIdx) => (
-                  <div key={pIdx} style={styles.pointRow}>
-                    <CheckCircle2 size={15} color={f.accent} style={{ flexShrink: 0 }} />
-                    <span>{p}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => navigate(f.link)}
-                style={{ ...styles.btn, backgroundColor: f.accent }}
-              >
-                <span>{f.btnText}</span>
-                <ArrowRight size={16} />
-              </button>
             </div>
           ))}
         </div>
@@ -104,15 +97,15 @@ const styles = {
   section: {
     padding: '4.5rem 1.5rem',
     backgroundColor: '#FDFBF7',
-    fontFamily: 'Arial, sans-serif',
+    fontFamily: "'Inter', Arial, sans-serif",
   },
   inner: {
-    maxWidth: '1200px',
+    maxWidth: '1100px',
     margin: '0 auto',
   },
   header: {
     textAlign: 'center',
-    marginBottom: '3rem',
+    marginBottom: '2.5rem',
   },
   badge: {
     display: 'inline-block',
@@ -137,26 +130,97 @@ const styles = {
     margin: '0 auto',
     lineHeight: '1.5',
   },
-  grid: {
+
+  /* Featured card */
+  featuredCard: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 0.8fr)',
     gap: '1.5rem',
-  },
-  card: {
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     border: '1px solid #E7DFCD',
     borderRadius: '16px',
-    padding: '1.8rem 1.6rem',
+    padding: '1.5rem 1.75rem',
+    marginBottom: '1.25rem',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.04)',
+  },
+  featuredText: {
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-    transition: 'all 0.25s ease',
+    alignItems: 'flex-start',
   },
-  cardTop: {
+  featuredTitle: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '1.4rem',
+    fontWeight: '700',
+    color: '#16212B',
+    margin: '0.4rem 0 0.4rem 0',
+  },
+  featuredDesc: {
+    fontSize: '0.9rem',
+    color: '#52606B',
+    lineHeight: '1.5',
+    marginBottom: '1rem',
+  },
+
+  previewWrap: {
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  previewCard: {
+    width: '100%',
+    backgroundColor: '#0F4A45',
+    borderRadius: '12px',
+    padding: '1.1rem 1.25rem',
+    color: '#FFFFFF',
+  },
+  previewTopRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '1.2rem',
+    marginBottom: '0.6rem',
+  },
+  previewLabel: {
+    fontSize: '0.68rem',
+    fontWeight: '700',
+    letterSpacing: '0.06em',
+    color: '#B9E0D8',
+  },
+  confidencePill: {
+    fontSize: '0.65rem',
+    fontWeight: '600',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: '0.22rem 0.55rem',
+    borderRadius: '999px',
+  },
+  previewPrice: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '1.9rem',
+    fontWeight: '700',
+    lineHeight: 1,
+  },
+  previewPriceUnit: {
+    fontSize: '0.9rem',
+    fontWeight: '500',
+    marginLeft: '0.3rem',
+    color: '#B9E0D8',
+  },
+  previewSub: {
+    fontSize: '0.76rem',
+    color: '#CFE8E2',
+    marginTop: '0.45rem',
+  },
+
+  /* Secondary tools */
+  secondaryGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '1.25rem',
+  },
+  secondaryCard: {
+    display: 'flex',
+    gap: '1rem',
+    padding: '1.25rem',
   },
   iconWrapper: {
     width: '46px',
@@ -165,43 +229,47 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: '0.9rem',
+  },
+  iconWrapperSm: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   tag: {
     fontSize: '0.68rem',
     fontWeight: '700',
     letterSpacing: '0.5px',
   },
-  cardTitle: {
+  secondaryTitle: {
     fontFamily: "'Fraunces', Georgia, serif",
-    fontSize: '1.35rem',
+    fontSize: '1.05rem',
     fontWeight: '700',
     color: '#16212B',
-    margin: '0 0 0.5rem 0',
+    margin: '0.3rem 0 0.4rem 0',
   },
-  cardDesc: {
-    fontSize: '0.88rem',
+  secondaryDesc: {
+    fontSize: '0.85rem',
     color: '#52606B',
     lineHeight: '1.5',
-    marginBottom: '1.25rem',
-    minHeight: '42px',
+    marginBottom: '0.6rem',
   },
-  pointsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.6rem',
-    marginBottom: '1.75rem',
-    marginTop: 'auto',
-    paddingTop: '1rem',
-    borderTop: '1px solid #F3F4F6',
-  },
-  pointRow: {
-    display: 'flex',
+  linkBtn: {
+    display: 'inline-flex',
     alignItems: 'center',
-    gap: '0.5rem',
-    fontSize: '0.82rem',
-    color: '#374151',
-    fontWeight: '500',
+    gap: '0.35rem',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    fontSize: '0.85rem',
+    fontWeight: '700',
+    cursor: 'pointer',
   },
+
   btn: {
     display: 'flex',
     alignItems: 'center',
@@ -210,10 +278,9 @@ const styles = {
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '10px',
-    padding: '0.75rem 1rem',
+    padding: '0.7rem 1.1rem',
     fontSize: '0.88rem',
     fontWeight: '700',
     cursor: 'pointer',
-    transition: 'opacity 0.2s ease',
   },
 };
