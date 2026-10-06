@@ -5,15 +5,45 @@ __pycache__/
 .venv/
 venv/
 env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
 
+# Data (scraped datasets, processed files) — not uploaded to GitHub
+/data/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.parquet
 
-.DS_Store
-
-# Node / React 
+# Node / React
 node_modules/
 build/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables / secrets
 .env
-.env.local
+.env.*
+!.env.example
 
 # Jupyter Notebook Checkpoints
 .ipynb_checkpoints/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
