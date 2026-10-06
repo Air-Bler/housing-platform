@@ -1,0 +1,331 @@
+// Χρώματα σεναρίων: επικυρωμένα για αχρωματοψία & αντίθεση σε επιφάνεια #FFFDF9
+export const SCENARIO_COLORS = {
+  refresh: '#B7792F',
+  full: '#0A8F84',
+  premium: '#6A4FA0',
+};
+
+export const formatEuro = (value) => {
+  if (value === null || value === undefined) return '—';
+  const rounded = Math.round(value);
+  return `${rounded < 0 ? '−' : ''}€${Math.abs(rounded).toLocaleString('el-GR')}`;
+};
+
+export const formatYears = (value) => {
+  if (value === null || value === undefined) return '—';
+  if (value < 1) return `${Math.max(1, Math.round(value * 12))} μήνες`;
+  return `${value.toLocaleString('el-GR')} χρόνια`;
+};
+
+export const renovationStyles = {
+  conditionGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '0.6rem',
+  },
+  conditionCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+    padding: '0.75rem',
+    borderRadius: '10px',
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    borderColor: '#E7DFCD',
+    backgroundColor: '#F9F6EE',
+    cursor: 'pointer',
+    textAlign: 'left',
+    font: 'inherit',
+    color: '#52606B',
+  },
+  conditionCardActive: {
+    backgroundColor: '#EAF2F1',
+    borderColor: '#0F766E',
+    color: '#0F766E',
+  },
+  conditionTitle: {
+    fontSize: '0.84rem',
+    fontWeight: '600',
+  },
+  conditionDesc: {
+    fontSize: '0.74rem',
+    lineHeight: 1.35,
+    color: '#7A7264',
+  },
+  hint: {
+    fontSize: '0.74rem',
+    color: '#7A7264',
+  },
+
+  // Αποτελέσματα
+  heroSentence: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '1.35rem',
+    lineHeight: 1.4,
+    fontWeight: '500',
+    margin: '0.25rem 0 1.25rem',
+  },
+  heroHighlight: {
+    color: '#FDE68A',
+    fontWeight: '700',
+  },
+  heroStatsRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: '0.6rem',
+  },
+  heroStat: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: '10px',
+    padding: '0.65rem 0.75rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.15rem',
+  },
+  heroStatLabel: {
+    fontSize: '0.7rem',
+    color: '#A7F3D0',
+    fontWeight: '600',
+    letterSpacing: '0.3px',
+  },
+  heroStatValue: {
+    fontSize: '1.1rem',
+    fontWeight: '700',
+  },
+  inactionCard: {
+    backgroundColor: '#FBEAE7',
+    border: '1px solid #F1DAD3',
+    borderRadius: '14px',
+    padding: '1.1rem 1.25rem',
+    color: '#8A3226',
+  },
+  inactionNumber: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '1.9rem',
+    fontWeight: '700',
+    lineHeight: 1.1,
+  },
+  fullWidthSection: {
+    marginTop: '2rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.25rem',
+  },
+  sectionHeading: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '1.35rem',
+    fontWeight: '600',
+    margin: 0,
+    color: '#16212B',
+  },
+  sectionSub: {
+    fontSize: '0.86rem',
+    color: '#52606B',
+    margin: '0.2rem 0 0',
+  },
+  scenarioGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '1rem',
+  },
+  scenarioCard: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.85rem',
+    backgroundColor: '#FFFDF9',
+    borderStyle: 'solid',
+    borderWidth: '4px 1px 1px 1px',
+    borderRadius: '16px',
+    padding: '1.25rem',
+    cursor: 'pointer',
+    textAlign: 'left',
+    font: 'inherit',
+    color: '#16212B',
+    transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+  },
+  scenarioCardSelected: {
+    boxShadow: '0 10px 28px rgba(22, 33, 43, 0.10)',
+  },
+  recommendedBadge: {
+    position: 'absolute',
+    top: '-11px',
+    right: '1rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    backgroundColor: '#16212B',
+    color: '#FFFDF9',
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    letterSpacing: '0.4px',
+    padding: '0.25rem 0.6rem',
+    borderRadius: '999px',
+  },
+  scenarioName: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '1.08rem',
+    fontWeight: '600',
+    margin: 0,
+  },
+  swatch: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '4px',
+    flexShrink: 0,
+  },
+  scenarioTagline: {
+    fontSize: '0.8rem',
+    color: '#52606B',
+    margin: 0,
+    lineHeight: 1.4,
+  },
+  scenarioRentRow: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '0.3rem',
+  },
+  scenarioRent: {
+    fontFamily: "'Fraunces', Georgia, serif",
+    fontSize: '2rem',
+    fontWeight: '700',
+    lineHeight: 1,
+  },
+  metricList: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '0.55rem 0.75rem',
+    margin: 0,
+  },
+  metricLabel: {
+    fontSize: '0.72rem',
+    color: '#7A7264',
+    margin: 0,
+  },
+  metricValue: {
+    fontSize: '0.95rem',
+    fontWeight: '700',
+    margin: 0,
+    color: '#16212B',
+  },
+  overBudget: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.3rem',
+    fontSize: '0.74rem',
+    color: '#8A3226',
+    fontWeight: '600',
+  },
+  chartCard: {
+    backgroundColor: '#FFFDF9',
+    border: '1px solid #E7DFCD',
+    borderRadius: '16px',
+    padding: '1.25rem 1.25rem 1rem',
+  },
+  chartHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '1rem',
+    flexWrap: 'wrap',
+    marginBottom: '0.75rem',
+  },
+  legend: {
+    display: 'flex',
+    gap: '1rem',
+    flexWrap: 'wrap',
+    fontSize: '0.8rem',
+    color: '#52606B',
+  },
+  legendItem: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+  },
+  legendLine: {
+    width: '16px',
+    height: '3px',
+    borderRadius: '2px',
+  },
+  toggleBtn: {
+    backgroundColor: '#F3EFE6',
+    color: '#52606B',
+    border: '1px solid #E7DFCD',
+    padding: '0.35rem 0.75rem',
+    borderRadius: '8px',
+    fontSize: '0.78rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  tooltip: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    backgroundColor: '#16212B',
+    color: '#FFFDF9',
+    borderRadius: '10px',
+    padding: '0.6rem 0.75rem',
+    fontSize: '0.78rem',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+    minWidth: '190px',
+    zIndex: 2,
+  },
+  tooltipRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '0.75rem',
+    marginTop: '0.25rem',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '0.82rem',
+  },
+  th: {
+    textAlign: 'right',
+    padding: '0.45rem 0.6rem',
+    borderBottom: '1px solid #E7DFCD',
+    color: '#52606B',
+    fontWeight: '600',
+  },
+  td: {
+    textAlign: 'right',
+    padding: '0.4rem 0.6rem',
+    borderBottom: '1px solid #F1ECE1',
+    fontVariantNumeric: 'tabular-nums',
+  },
+  twoCol: {
+    display: 'grid',
+    gridTemplateColumns: '1.2fr 0.8fr',
+    gap: '1rem',
+    alignItems: 'start',
+  },
+  breakdownRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '1rem',
+    padding: '0.5rem 0',
+    borderBottom: '1px solid #F1ECE1',
+    fontSize: '0.85rem',
+  },
+  criticalTag: {
+    marginLeft: '0.4rem',
+    fontSize: '0.66rem',
+    fontWeight: '700',
+    color: '#8A3226',
+    backgroundColor: '#FBEAE7',
+    padding: '0.1rem 0.4rem',
+    borderRadius: '999px',
+  },
+  assumptionList: {
+    margin: 0,
+    paddingLeft: '1.1rem',
+    fontSize: '0.8rem',
+    color: '#52606B',
+    lineHeight: 1.6,
+  },
+};
