@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import LandingPage from "./pages/LandingPage";
 import EstimatorPage from "./pages/EstimatorPage";
 import PriceMapPage from "./pages/PriceMapPage";
+import RenovationPage from "./pages/RenovationPage";
 
 function App() {
   return (
@@ -17,14 +18,7 @@ function App() {
 
         <Route path="/estimator" element={<EstimatorPage />} />
 
-        <Route
-          path="/renovation"
-          element={
-            <div style={{ padding: "2rem" }}>
-              <h2>Renovation ROI (Coming Soon)</h2>
-            </div>
-          }
-        />
+        <Route path="/renovation" element={<RenovationPage />} />
 
         <Route path="/heatmap" element={<PriceMapPage />} />
         <Route path="/prices" element={<PriceMapPage />} />

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.api import predict, vision
+from backend.app.api import predict, vision, renovation
 
 app = FastAPI(
     title="Real Estate Valuation & Explainability Platform API",
@@ -16,9 +16,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Σύνδεση των Routers
+#
 app.include_router(predict.router, prefix="/api", tags=["Machine Learning"])
 app.include_router(vision.router, prefix="/api", tags=["AI Vision Engine"])
+app.include_router(renovation.router, prefix="/api", tags=["Renovation ROI"])
 
 @app.get("/")
 def root():
