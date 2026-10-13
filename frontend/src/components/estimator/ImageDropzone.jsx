@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { styles } from './estimator.styles';
+import { IMAGE_LIMITS } from '../../api';
 
-export default function ImageDropzone({ images, previews, onFilesAdded, onRemoveImage }) {
+export default function ImageDropzone({ images, previews, onFilesAdded, onRemoveImage, notices = [] }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = (e) => {
@@ -38,8 +39,11 @@ export default function ImageDropzone({ images, previews, onFilesAdded, onRemove
           type="file"
           id="file-upload"
           multiple
-          accept="image/*"
-          onChange={(e) => onFilesAdded(e.target.files)}
+          accept={IMAGE_LIMITS.types.join(',')}
+          onChange={(e) => {
+            onFilesAdded(e.target.files);
+            e.target.value = '';
+          }}
           style={{ display: 'none' }}
         />
         <label htmlFor="file-upload" style={styles.uploadLabel}>
@@ -75,7 +79,14 @@ export default function ImageDropzone({ images, previews, onFilesAdded, onRemove
         </div>
       )}
 
+      {notices.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.76rem', color: '#8A3226' }}>
+          {notices.map((n, i) => <li key={i}>{n}</li>)}
+        </ul>
+      )}
+
       <span style={{ fontSize: '0.74rem', color: '#7A7264' }}>
+        Έως {IMAGE_LIMITS.maxImages} φωτογραφίες JPEG, PNG ή WEBP, μέχρι {IMAGE_LIMITS.maxImageBytes / 1024 / 1024} MB η καθεμία.{' '}
         Προαιρετικό: Το AI θα αναλύσει οπτικά τους χώρους και τις ανάγκες ανακαίνισης.
       </span>
     </div>

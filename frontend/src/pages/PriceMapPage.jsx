@@ -6,6 +6,7 @@ import SuburbRankings from '../components/pricemap/SuburbRankings';
 import SuburbComparator from '../components/pricemap/SuburbComparator';
 import SuburbsTable from '../components/pricemap/SuburbsTable';
 import { Loader2 } from 'lucide-react';
+import { API_BASE } from '../api';
 
 export default function PriceMapPage() {
   const [suburbsData, setSuburbsData] = useState([]);
@@ -30,7 +31,7 @@ export default function PriceMapPage() {
 
         let backendList = [];
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/suburbs-stats');
+          const res = await fetch(`${API_BASE}/api/suburbs-stats`);
           if (res.ok) {
             const data = await res.json();
             if (data && data.suburbs && data.suburbs.length > 0) {

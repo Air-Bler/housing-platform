@@ -4,6 +4,7 @@ import { styles } from '../components/estimator/estimator.styles';
 import ImageDropzone from '../components/estimator/ImageDropzone';
 import VisionAnalysisCard from '../components/estimator/VisionAnalysisCard';
 import PoiDistanceList from '../components/estimator/PoiDistanceList';
+import { apiFetch, postForm, postJson, checkImages } from '../api';
 
 import {
   Calculator,
@@ -27,8 +28,15 @@ import {
   ShieldCheck,
   Image as ImageIcon,
   BrainCircuit,
-  TrainFront
+  TrainFront,
+  Info
 } from 'lucide-react';
+
+const REASON_LOOK = {
+  positive: { bg: '#EAF2F1', color: '#0F766E', icon: CheckCircle2 },
+  negative: { bg: '#FBEAE7', color: '#B33F30', icon: XCircle },
+  info: { bg: '#F2EFE9', color: '#52606B', icon: Info },
+};
 
 export default function EstimatorPage() {
   const initialForm = {
@@ -57,11 +65,12 @@ export default function EstimatorPage() {
   const [previews, setPreviews] = useState([]);
   const [visionResult, setVisionResult] = useState(null);
   const [visionLoading, setVisionLoading] = useState(false);
+  const [visionError, setVisionError] = useState(null);
+  const [imageNotices, setImageNotices] = useState([]);
 
-  const [modelStats, setModelStats] = useState({
-    dataset_size: '4.100+',
-    model_accuracy: '98.4%',
-  });
+  // Μετρημένα από το backend σε αγγελίες εκτός εκπαίδευσης· μέχρι να φορτωθούν δείχνουμε «—».
+  const [modelStats, setModelStats] = useState(null);
+  const errorLabel = modelStats ? `±€${Math.round(modelStats.mae)}` : '—';
 
   const cleanName = (raw) => (raw ? raw.split('(')[0].split('-')[0].split('–')[0].trim() : '');
 
@@ -99,35 +108,27 @@ export default function EstimatorPage() {
         setError('Δεν μπορέσαμε να φορτώσουμε τα δεδομένα των γειτονιών.');
       });
 
-    fetch('http://127.0.0.1:8000/api/model-stats')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.dataset_size && data.model_accuracy) {
-          setModelStats({
-            dataset_size: data.dataset_size,
-            model_accuracy: data.model_accuracy,
-          });
-        }
-      })
+    apiFetch('/api/model-stats')
+      .then(setModelStats)
       .catch(() => {
-        console.log('Using default model stats');
+        console.log('Model stats unavailable');
       });
   }, []);
 
   const handleFilesAdded = (newFiles) => {
-    const validFiles = Array.from(newFiles).filter((file) => file.type.startsWith('image/'));
-    if (validFiles.length === 0) return;
+    const { accepted, rejected } = checkImages(images, Array.from(newFiles));
+    setImageNotices(rejected);
+    if (accepted.length === 0) return;
 
-    const updatedImages = [...images, ...validFiles];
-    setImages(updatedImages);
-    setPreviews(updatedImages.map((file) => URL.createObjectURL(file)));
+    setImages([...images, ...accepted]);
+    setPreviews([...previews, ...accepted.map((file) => URL.createObjectURL(file))]);
   };
 
   const handleRemoveImage = (index) => {
-    const updatedImages = images.filter((_, i) => i !== index);
-    const updatedPreviews = previews.filter((_, i) => i !== index);
-    setImages(updatedImages);
-    setPreviews(updatedPreviews);
+    URL.revokeObjectURL(previews[index]);
+    setImages(images.filter((_, i) => i !== index));
+    setPreviews(previews.filter((_, i) => i !== index));
+    setImageNotices([]);
   };
 
   const handleChange = (e) => {
@@ -151,9 +152,12 @@ export default function EstimatorPage() {
     setFormErrors({});
     setResult(null);
     setError(null);
+    previews.forEach((url) => URL.revokeObjectURL(url));
     setImages([]);
     setPreviews([]);
+    setImageNotices([]);
     setVisionResult(null);
+    setVisionError(null);
     setVisionLoading(false);
   };
 
@@ -173,78 +177,83 @@ export default function EstimatorPage() {
 
     const bedsVal = parseInt(formData.bedrooms, 10);
     if (formData.bedrooms === '' || isNaN(bedsVal)) errors.bedrooms = 'Συμπληρώστε beds.';
+    else if (bedsVal < 0 || bedsVal > 15) errors.bedrooms = '0 - 15.';
 
     const bathsVal = parseInt(formData.bathrooms, 10);
     if (formData.bathrooms === '' || isNaN(bathsVal)) errors.bathrooms = 'Συμπληρώστε μπάνια.';
+    else if (bathsVal < 1 || bathsVal > 10) errors.bathrooms = '1 - 10.';
 
     const floorVal = parseInt(formData.floor, 10);
     if (formData.floor === '' || isNaN(floorVal)) errors.floor = 'Συμπληρώστε όροφο.';
+    else if (floorVal < -2 || floorVal > 40) errors.floor = '-2 - 40.';
+
+    if (formData.user_asking_price && !(parseFloat(formData.user_asking_price) > 0)) {
+      errors.user_asking_price = 'Μη έγκυρο ποσό.';
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleAnalyzeVision = (estimatedPrice) => {
-    if (images.length === 0) return;
-    setVisionLoading(true);
+  const buildPayload = (extra = {}) => ({
+    suburb: formData.suburb,
+    sqm: parseFloat(formData.sqm),
+    bedrooms: parseInt(formData.bedrooms, 10),
+    bathrooms: parseInt(formData.bathrooms, 10),
+    floor: parseInt(formData.floor, 10),
+    year_built: parseInt(formData.year_built, 10),
+    metro_walk_time: formData.metro_walk_time || 'auto',
+    elevator: !!formData.elevator,
+    renovated: !!formData.renovated,
+    furnished: !!formData.furnished,
+    parking: !!formData.parking,
+    user_asking_price: formData.user_asking_price ? parseFloat(formData.user_asking_price) : null,
+    ...extra,
+  });
 
-    const bodyData = new FormData();
-    bodyData.append("suburb", formData.suburb);
-    bodyData.append("sqm", formData.sqm);
-    bodyData.append("estimated_price", estimatedPrice);
-    images.forEach((file) => bodyData.append("images", file));
-
-    fetch("http://127.0.0.1:8000/api/analyze-images", {
-      method: "POST",
-      body: bodyData,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Vision API Error");
-        return res.json();
-      })
-      .then((data) => {
-        setVisionResult(data.analysis);
-        setVisionLoading(false);
-
-        if (data.analysis && data.analysis.score) {
-          const payload = {
-            suburb: formData.suburb,
-            sqm: parseFloat(formData.sqm),
-            bedrooms: parseInt(formData.bedrooms, 10),
-            bathrooms: parseInt(formData.bathrooms, 10),
-            floor: parseInt(formData.floor, 10),
-            year_built: parseInt(formData.year_built, 10),
-            metro_walk_time: formData.metro_walk_time || 'auto',
-            elevator: !!formData.elevator,
-            renovated: !!formData.renovated,
-            furnished: !!formData.furnished,
-            parking: !!formData.parking,
-            user_asking_price: formData.user_asking_price ? parseFloat(formData.user_asking_price) : null,
-            vision_score: parseFloat(data.analysis.score)
-          };
-
-          fetch('http://127.0.0.1:8000/api/predict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-            .then((r) => r.json())
-            .then((updatedRes) => {
-              setResult(updatedRes);
-            })
-            .catch((e) => console.error("Vision recalculate error:", e));
-        }
-      })
-      .catch((err) => {
-        console.error("Error analyzing images:", err);
-        setVisionLoading(false);
-      });
+  // Μετατρέπει τα σφάλματα πεδίων του backend σε σφάλματα της φόρμας.
+  const applyFieldErrors = (err) => {
+    const fieldErrors = {};
+    err.details.forEach((d) => {
+      if (d.field && d.field in formData) fieldErrors[d.field] = d.message;
+    });
+    if (Object.keys(fieldErrors).length) setFormErrors((prev) => ({ ...prev, ...fieldErrors }));
   };
 
-  const handleSubmit = (e) => {
+  const handleAnalyzeVision = async () => {
+    if (images.length === 0) return;
+    setVisionLoading(true);
+    setVisionError(null);
+
+    const bodyData = new FormData();
+    bodyData.append('suburb', formData.suburb);
+    bodyData.append('sqm', formData.sqm);
+    images.forEach((file) => bodyData.append('images', file));
+
+    let analysis;
+    try {
+      ({ analysis } = await postForm('/api/analyze-images', bodyData));
+      setVisionResult(analysis);
+    } catch (err) {
+      // Η εκτίμηση παραμένει αυτή χωρίς φωτογραφίες· ο χρήστης βλέπει ότι η ανάλυση δεν ολοκληρώθηκε.
+      setVisionError(err.message);
+      return;
+    } finally {
+      setVisionLoading(false);
+    }
+
+    try {
+      setResult(await postJson('/api/predict', buildPayload({ vision_score: analysis.score })));
+    } catch (err) {
+      setVisionError(`Η ανάλυση ολοκληρώθηκε, αλλά η εκτίμηση δεν ενημερώθηκε: ${err.message}`);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setVisionResult(null);
+    setVisionError(null);
 
     if (!validateForm()) {
       setError('Παρακαλώ διορθώστε τα σφάλματα στη φόρμα πριν συνεχίσετε.');
@@ -252,45 +261,17 @@ export default function EstimatorPage() {
     }
 
     setLoading(true);
-    if (images.length > 0) setVisionLoading(true);
+    try {
+      setResult(await postJson('/api/predict', buildPayload()));
+    } catch (err) {
+      applyFieldErrors(err);
+      setError(err.message);
+      return;
+    } finally {
+      setLoading(false);
+    }
 
-    const payload = {
-      suburb: formData.suburb,
-      sqm: parseFloat(formData.sqm),
-      bedrooms: parseInt(formData.bedrooms, 10),
-      bathrooms: parseInt(formData.bathrooms, 10),
-      floor: parseInt(formData.floor, 10),
-      year_built: parseInt(formData.year_built, 10),
-      metro_walk_time: formData.metro_walk_time || 'auto',
-      elevator: !!formData.elevator,
-      renovated: !!formData.renovated,
-      furnished: !!formData.furnished,
-      parking: !!formData.parking,
-      user_asking_price: formData.user_asking_price ? parseFloat(formData.user_asking_price) : null,
-    };
-
-    fetch('http://127.0.0.1:8000/api/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Σφάλμα API (${res.status})`);
-        return res.json();
-      })
-      .then((data) => {
-        setResult(data);
-        setLoading(false);
-
-        if (images.length > 0) {
-          handleAnalyzeVision(data.estimated_price);
-        }
-      })
-      .catch((err) => {
-        setError('Κάτι πήγε στραβά κατά τον υπολογισμό. ' + err.message);
-        setLoading(false);
-        setVisionLoading(false);
-      });
+    handleAnalyzeVision();
   };
 
   const askingPrice = formData.user_asking_price && !isNaN(parseFloat(formData.user_asking_price))
@@ -470,7 +451,7 @@ export default function EstimatorPage() {
                 <input
                   type="number"
                   name="floor"
-                  placeholder="π.χ. 3"
+                  placeholder="0 = ισόγειο, -1 = υπόγειο"
                   value={formData.floor}
                   onChange={handleChange}
                   onWheel={(e) => e.target.blur()}
@@ -537,6 +518,7 @@ export default function EstimatorPage() {
               previews={previews}
               onFilesAdded={handleFilesAdded}
               onRemoveImage={handleRemoveImage}
+              notices={imageNotices}
             />
           </div>
 
@@ -556,6 +538,7 @@ export default function EstimatorPage() {
                 ...(formErrors.user_asking_price ? styles.inputError : {}),
               }}
             />
+            {formErrors.user_asking_price && <span style={styles.errorText}>{formErrors.user_asking_price}</span>}
           </div>
 
           <div style={styles.actionsRow}>
@@ -585,11 +568,16 @@ export default function EstimatorPage() {
               <div style={styles.statsMiniRow}>
                 <div style={styles.statBoxGreen}>
                   <span style={styles.statLabelColored}>Δείγμα Αγγελιών</span>
-                  <span style={styles.statValueColored}>{modelStats.dataset_size}</span>
+                  <span style={styles.statValueColored}>
+                    {modelStats ? modelStats.dataset_size.toLocaleString('el-GR') : '—'}
+                  </span>
                 </div>
-                <div style={styles.statBoxGreen}>
-                  <span style={styles.statLabelColored}>Μέση Ακρίβεια</span>
-                  <span style={styles.statValueColored}>{modelStats.model_accuracy}</span>
+                <div
+                  style={styles.statBoxGreen}
+                  title={modelStats ? `Μετρημένο σε ${modelStats.test_size} αγγελίες που δεν χρησιμοποιήθηκαν στην εκπαίδευση` : undefined}
+                >
+                  <span style={styles.statLabelColored}>Μέσο Σφάλμα</span>
+                  <span style={styles.statValueColored}>{errorLabel} / μήνα</span>
                 </div>
               </div>
 
@@ -642,7 +630,7 @@ export default function EstimatorPage() {
                   <span style={styles.mainEstimateLabel}>
                     <ShieldCheck size={14} style={{ marginRight: '4px' }} /> AI FAIR RENT ESTIMATE
                   </span>
-                  <span style={styles.accuracyTag}>{modelStats.model_accuracy} Confidence</span>
+                  <span style={styles.accuracyTag}>Μέσο σφάλμα {errorLabel}</span>
                 </div>
 
                 <div style={styles.priceContainer}>
@@ -696,48 +684,56 @@ export default function EstimatorPage() {
               </div>
 
               <VisionAnalysisCard
-                imagesCount={images.length}
                 visionLoading={visionLoading}
                 visionResult={visionResult}
+                visionError={visionError}
               />
 
-              <div style={styles.valueScoreCard}>
-                <div style={styles.valueScoreHeader}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Star size={20} color="#C98A3E" fill="#C98A3E" />
-                    <span style={styles.valueScoreTitle}>Deal Value Rating</span>
-                  </div>
-                  <div style={styles.valueScoreBadge}>
-                    {result.value_score} <span style={{ fontSize: '0.75rem', color: '#7A7264' }}>/ 10</span>
+              {result.value_score === null ? (
+                <div style={styles.valueScoreCard}>
+                  <div style={styles.dealTypeLabel}>
+                    Συμπληρώστε το ζητούμενο ενοίκιο για να δείτε αν η τιμή της αγγελίας είναι δίκαιη.
                   </div>
                 </div>
+              ) : (
+                <div style={styles.valueScoreCard}>
+                  <div style={styles.valueScoreHeader}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Star size={20} color="#C98A3E" fill="#C98A3E" />
+                      <span style={styles.valueScoreTitle}>Deal Value Rating</span>
+                    </div>
+                    <div style={styles.valueScoreBadge}>
+                      {result.value_score} <span style={{ fontSize: '0.75rem', color: '#7A7264' }}>/ 10</span>
+                    </div>
+                  </div>
 
-                <div style={styles.progressBarTrack}>
-                  <div
-                    style={{
-                      ...styles.progressBarFill,
-                      width: `${(result.value_score / 10) * 100}%`,
-                      backgroundColor:
-                        result.value_score >= 7.5
-                          ? '#0F766E'
-                          : result.value_score >= 5
-                          ? '#C98A3E'
-                          : '#B33F30',
-                    }}
-                  />
-                </div>
+                  <div style={styles.progressBarTrack}>
+                    <div
+                      style={{
+                        ...styles.progressBarFill,
+                        width: `${(result.value_score / 10) * 100}%`,
+                        backgroundColor:
+                          result.value_score >= 7.5
+                            ? '#0F766E'
+                            : result.value_score >= 5
+                            ? '#C98A3E'
+                            : '#B33F30',
+                      }}
+                    />
+                  </div>
 
-                <div style={styles.dealTypeLabel}>
-                  Κατάσταση:{' '}
-                  <strong
-                    style={{
-                      color: result.value_score >= 7.5 ? '#0F766E' : '#C98A3E',
-                    }}
-                  >
-                    {result.deal_type}
-                  </strong>
+                  <div style={styles.dealTypeLabel}>
+                    Κατάσταση:{' '}
+                    <strong
+                      style={{
+                        color: result.value_score >= 7.5 ? '#0F766E' : '#C98A3E',
+                      }}
+                    >
+                      {result.deal_type}
+                    </strong>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <PoiDistanceList poiDistances={result.poi_distances} />
 
@@ -767,24 +763,24 @@ export default function EstimatorPage() {
               {result.reasons && result.reasons.length > 0 && (
                 <div style={styles.infoCard}>
                   <h4 style={styles.infoCardTitle}>Παράγοντες Διάμορφωσης Τιμής</h4>
+                  <p style={{ fontSize: '0.78rem', color: '#7A7264', margin: '0 0 0.6rem' }}>
+                    Πόσο αλλάζει η εκτίμηση του μοντέλου αν αλλάξει μόνο αυτό το χαρακτηριστικό, σε σχέση με
+                    την τυπική τιμή της περιοχής.
+                  </p>
                   <div style={styles.reasonsWrapper}>
-                    {result.reasons.map((r, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          ...styles.reasonTag,
-                          backgroundColor: r.type === 'positive' ? '#EAF2F1' : '#FBEAE7',
-                          color: r.type === 'positive' ? '#0F766E' : '#B33F30',
-                        }}
-                      >
-                        {r.type === 'positive' ? (
-                          <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
-                        ) : (
-                          <XCircle size={15} style={{ flexShrink: 0 }} />
-                        )}
-                        <span>{r.text}</span>
-                      </div>
-                    ))}
+                    {result.reasons.map((r, idx) => {
+                      const look = REASON_LOOK[r.type] || REASON_LOOK.info;
+                      const Icon = look.icon;
+                      return (
+                        <div
+                          key={idx}
+                          style={{ ...styles.reasonTag, backgroundColor: look.bg, color: look.color }}
+                        >
+                          <Icon size={15} style={{ flexShrink: 0 }} />
+                          <span>{r.text}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

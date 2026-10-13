@@ -1,10 +1,5 @@
-import Papa from "papaparse";
 import { getMarkerColor } from "../Common";
-
-function cleanSuburbName(raw) {
-  if (!raw) return "";
-  return raw.split("(")[0].split("-")[0].trim();
-}
+import { apiFetch } from "../../../api";
 
 function selectSignificant(allAreas, maxAreas) {
   const byPriceDesc = [...allAreas].sort((a, b) => b.price - a.price);
@@ -24,62 +19,9 @@ function selectSignificant(allAreas, maxAreas) {
   );
 }
 
-export async function loadAthensData(
-  csvPath = "/data/cleaned_properties.csv",
-  minListings = 15,
-  maxAreas = 36,
-  maxLabels = 25
-) {
-  const response = await fetch(csvPath);
-  if (!response.ok) {
-    throw new Error(`Δεν βρέθηκε το CSV: ${response.status} ${response.statusText}`);
-  }
-
-  const csvText = await response.text();
-  const { data: rows } = Papa.parse(csvText, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-  });
-
-  const groups = new Map();
-
-  rows.forEach((row) => {
-    const validRow =
-      row.suburb &&
-      Number.isFinite(Number(row.latitude)) &&
-      Number.isFinite(Number(row.longitude)) &&
-      Number.isFinite(Number(row.price_per_sqm));
-
-    if (!validRow) return;
-
-    if (!groups.has(row.suburb)) {
-      groups.set(row.suburb, {
-        name: cleanSuburbName(row.suburb),
-        lats: [],
-        lngs: [],
-        prices: [],
-        count: 0,
-      });
-    }
-
-    const group = groups.get(row.suburb);
-    group.lats.push(Number(row.latitude));
-    group.lngs.push(Number(row.longitude));
-    group.prices.push(Number(row.price_per_sqm));
-    group.count += 1;
-  });
-
-  const average = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
-
-  const allAreas = Array.from(groups.values())
-    .filter((group) => group.count >= minListings)
-    .map((group) => ({
-      name: group.name,
-      position: [average(group.lats), average(group.lngs)],
-      price: average(group.prices),
-      count: group.count,
-    }));
+// Μέση τιμή ανά περιοχή από το backend· οι αγγελίες δεν φτάνουν ποτέ στον browser.
+export async function loadAthensData(maxAreas = 36, maxLabels = 25) {
+  const { areas: allAreas } = await apiFetch("/api/heatmap-areas");
 
   const areas = selectSignificant(allAreas, maxAreas);
 

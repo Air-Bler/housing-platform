@@ -81,7 +81,7 @@ def validate():
             if col == 'sqm': row[col] = sc['sqm']
             elif col == 'bedrooms': row[col] = sc['bedrooms']
             elif col == 'bathrooms': row[col] = sc['bathrooms']
-            elif col == 'floor': row[col] = sc['floor']
+            elif col == 'floor': row[col] = sc['floor'] + 5  # κωδικός Spitogatos: 1ος όροφος = 6
             elif col == 'year_built': row[col] = sc['year_built']
             elif col == 'property_age': row[col] = current_year - sc['year_built']
             elif col == 'suburb': row[col] = sc['suburb']

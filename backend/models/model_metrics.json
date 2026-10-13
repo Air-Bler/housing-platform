@@ -1,0 +1,27 @@
+{
+  "generated": "2026-10-13",
+  "dataset_rows": 4162,
+  "dataset_md5": "63da3126e7a0350cec82fd526ba1eb47",
+  "test_rows": 833,
+  "split": {
+    "test_size": 0.2,
+    "random_state": 42
+  },
+  "model_only": {
+    "r2": 0.788,
+    "mae": 157.9,
+    "mape": 0.1511
+  },
+  "app_model_price": {
+    "r2": 0.762,
+    "mae": 172.6,
+    "mape": 0.1634
+  },
+  "end_to_end": {
+    "r2": 0.762,
+    "mae": 172.6,
+    "mape": 0.1634,
+    "rows": 828,
+    "skipped": 5
+  }
+}

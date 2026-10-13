@@ -1,17 +1,24 @@
-import json
-import base64
-from openai import OpenAI
-from backend.app.config import OPENAI_API_KEY
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+from backend.app.services.ai_client import run_vision_json
+
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
 
-async def analyze_property_photos(suburb: str, sqm: float, estimated_price: float, images: list):
-    if not OPENAI_API_KEY:
-        return {"error": "Missing API Key"}
+class VisionAnalysis(BaseModel):
+    """Η μορφή που περιμένει το frontend. Οτιδήποτε άλλο απορρίπτεται."""
+    model_config = ConfigDict(extra="ignore")
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    score: float = Field(ge=1.0, le=10.0)
+    summary: NonEmptyText
+    highlights: list[NonEmptyText] = Field(min_length=1, max_length=5)
+    observations: list[NonEmptyText] = Field(min_length=1, max_length=5)
 
-    content_parts = []
-    
+
+async def analyze_property_photos(suburb: str, sqm: float, images: list[tuple[str, str]]) -> VisionAnalysis:
+    """images: ήδη ελεγμένες εικόνες (mime_type, base64). Σε αποτυχία σηκώνει AppError."""
     prompt_text = f"""
     Είσαι ένας αυστηρός, επαγγελματίας επιθεωρητής ακινήτων και εκτιμητής ποιότητας κατοικιών στην Αθήνα.
     Εξετάζεις φωτογραφίες για ακίνητο {sqm} τ.μ. στην περιοχή {suburb}.
@@ -29,7 +36,7 @@ async def analyze_property_photos(suburb: str, sqm: float, estimated_price: floa
 
     **ΟΔΗΓΙΕΣ ΓΙΑ ΤΑ ΠΕΔΙΑ ΕΞΟΔΟΥ:**
     - **highlights (Δυνατά Σημεία):** 2-3 συγκεκριμένα θετικά στοιχεία που ξεχωρίζουν στις φωτογραφίες.
-    - **observations (Σημεία Προσοχής):** 
+    - **observations (Σημεία Προσοχής):**
       - Εάν το ακίνητο είναι πλήρως ανακαινισμένο / άριστο, βάλε ΜΟΝΟ: ["Δεν παρατηρούνται ανάγκες άμεσης ανακαίνισης - το ακίνητο βρίσκεται σε άριστη κατάσταση."]
       - Εάν υπάρχουν πραγματικές ορατές ατέλειες ή παλαιότητα, κατάγραψε 1-2 συγκεκριμένες παρατηρήσεις.
 
@@ -47,41 +54,4 @@ async def analyze_property_photos(suburb: str, sqm: float, estimated_price: floa
     }}
     """
 
-    content_parts.append({"type": "text", "text": prompt_text})
-
-    for img in images:
-        contents = await img.read()
-        mime_type = img.content_type if img.content_type else "image/jpeg"
-        base64_image = base64.b64encode(contents).decode('utf-8')
-        content_parts.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{mime_type};base64,{base64_image}",
-                "detail": "high"
-            }
-        })
-
-    messages = [
-        {
-            "role": "user",
-            "content": content_parts
-        }
-    ]
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            response_format={"type": "json_object"},
-            max_tokens=450,
-            temperature=0.1
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"OpenAI Vision Error: {e}")
-        return {
-            "score": 7.5,
-            "summary": "Ολοκληρώθηκε οπτική αξιολόγηση με βάση τα ορατά χαρακτηριστικά του ακινήτου.",
-            "highlights": ["Καλή διατήρηση βασικών επιφανειών"],
-            "observations": ["Δεν παρατηρήθηκαν κρίσιμες φθορές στους ελεγχθέντες χώρους"]
-        }
+    return await run_vision_json(prompt_text, images, VisionAnalysis, max_tokens=450)

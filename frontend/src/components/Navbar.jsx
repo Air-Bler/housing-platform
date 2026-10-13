@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Calculator, Hammer, Map } from 'lucide-react';
+import { Home, Calculator, Hammer, Map, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const location = useLocation();
-  const isActive = (path) => location.pathname === path;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const mapPaths = ['/heatmap', '/prices', '/map'];
+  const isActive = (path) =>
+    location.pathname === path || (path === '/heatmap' && mapPaths.includes(location.pathname));
+
+  // Σε κινητό το μενού κλείνει όταν αλλάζει σελίδα.
+  useEffect(() => setMenuOpen(false), [location.pathname]);
 
   const navItems = [
     { path: '/', label: 'Αρχική', icon: Home },
@@ -14,7 +20,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav style={styles.nav}>
+    <nav className="site-nav" style={styles.nav}>
       <style>{`
         .brand-logo-container {
           display: flex;
@@ -49,6 +55,35 @@ const Navbar = () => {
           background-color: #F4EBDC !important;
           color: #16212B !important;
         }
+
+        .nav-toggle {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 42px;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 253, 249, 0.35);
+          background: transparent;
+          color: #FFFDF9;
+          cursor: pointer;
+        }
+
+        @media (max-width: 820px) {
+          .site-nav { padding: 0.6rem 1rem !important; flex-wrap: wrap; }
+          .brand-text { font-size: 1.3rem; }
+          .nav-toggle { display: inline-flex; }
+          .nav-links {
+            display: none !important;
+            flex-basis: 100%;
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 0.25rem !important;
+            padding-top: 0.6rem;
+          }
+          .nav-links.open { display: flex !important; }
+          .nav-link-item { padding: 0.7rem 0.9rem !important; }
+        }
       `}</style>
 
       
@@ -63,8 +98,19 @@ const Navbar = () => {
         <span className="brand-text">StegiAthens</span>
       </Link>
 
+      <button
+        type="button"
+        className="nav-toggle"
+        aria-label={menuOpen ? 'Κλείσιμο μενού' : 'Άνοιγμα μενού'}
+        aria-expanded={menuOpen}
+        aria-controls="site-nav-links"
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        {menuOpen ? <X size={22} /> : <Menu size={22} />}
+      </button>
+
       {/* Navigation Links */}
-      <div style={styles.linksContainer}>
+      <div id="site-nav-links" className={`nav-links${menuOpen ? ' open' : ''}`} style={styles.linksContainer}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
