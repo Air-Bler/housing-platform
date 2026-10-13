@@ -77,6 +77,7 @@ def train():
     os.makedirs(MODEL_DIR, exist_ok=True)
     joblib.dump(model_pipeline, MODEL_PATH)
     print(f"\nSaved trained model to: {MODEL_PATH}")
+    print("Τρέξτε `uv run python -m backend.scripts.evaluate_model` για να ενημερωθούν τα metrics της εφαρμογής.")
 
 if __name__ == "__main__":
     train()

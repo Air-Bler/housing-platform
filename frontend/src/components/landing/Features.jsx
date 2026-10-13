@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calculator, Hammer, MapPin, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { postJson } from '../../api';
+
+// Πραγματική εκτίμηση από το API για ένα συγκεκριμένο παράδειγμα ακινήτου.
+const SAMPLE = { suburb: 'Καλλιθέα', sqm: 70, bedrooms: 2, bathrooms: 1, floor: 2, year_built: 1985, elevator: true };
 
 export default function Features() {
   const navigate = useNavigate();
+  const [sample, setSample] = useState(null);
+
+  useEffect(() => {
+    postJson('/api/predict', SAMPLE).then(setSample).catch(() => setSample(null));
+  }, []);
 
   const secondaryFeatures = [
     {
@@ -11,7 +20,7 @@ export default function Features() {
       tag: "ΓΙΑ ΕΠΕΝΔΥΤΕΣ & ΙΔΙΟΚΤΗΤΕΣ",
       title: "Renovation ROI & Vision",
       desc: "Δες αν σου συμφέρει να ανακαινίσεις, με εκτίμηση αύξησης ενοικίου και ανάλυση φωτογραφιών.",
-      link: "/roi",
+      link: "/renovation",
       linkText: "Ανάλυση Ανακαίνισης",
       accent: "#C98A3E",
       bg: "#FDF6EC",
@@ -40,7 +49,12 @@ export default function Features() {
         </div>
 
         
-        <div style={styles.featuredCard}>
+        <style>{`
+          @media (max-width: 820px) {
+            .featured-card { grid-template-columns: 1fr !important; padding: 1.25rem !important; }
+          }
+        `}</style>
+        <div className="featured-card" style={styles.featuredCard}>
           <div style={styles.featuredText}>
             <div style={{ ...styles.iconWrapper, backgroundColor: '#EAF2F1' }}>
               <Calculator size={24} color="#0F766E" />
@@ -58,18 +72,22 @@ export default function Features() {
           </div>
 
         
-          <div style={styles.previewWrap}>
-            <div style={styles.previewCard}>
-              <div style={styles.previewTopRow}>
-                <span style={styles.previewLabel}>FAIR RENT ESTIMATE</span>
-                <span style={styles.confidencePill}>89% confidence</span>
+          {sample && (
+            <div style={styles.previewWrap}>
+              <div style={styles.previewCard}>
+                <div style={styles.previewTopRow}>
+                  <span style={styles.previewLabel}>ΠΑΡΑΔΕΙΓΜΑ ΕΚΤΙΜΗΣΗΣ</span>
+                </div>
+                <div style={styles.previewPrice}>
+                  €{Math.round(sample.estimated_price)}<span style={styles.previewPriceUnit}>/μήνα</span>
+                </div>
+                <div style={styles.previewSub}>
+                  Εύρος €{Math.round(sample.price_min)} – €{Math.round(sample.price_max)} · {SAMPLE.suburb},{' '}
+                  {SAMPLE.sqm} m², {SAMPLE.floor}ος όροφος
+                </div>
               </div>
-              <div style={styles.previewPrice}>
-                €657<span style={styles.previewPriceUnit}>/μήνα</span>
-              </div>
-              <div style={styles.previewSub}>Εύρος €583 – €732 · Καλλιθέα</div>
             </div>
-          </div>
+          )}
         </div>
 
       
@@ -185,13 +203,6 @@ const styles = {
     fontWeight: '700',
     letterSpacing: '0.06em',
     color: '#B9E0D8',
-  },
-  confidencePill: {
-    fontSize: '0.65rem',
-    fontWeight: '600',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    padding: '0.22rem 0.55rem',
-    borderRadius: '999px',
   },
   previewPrice: {
     fontFamily: "'Fraunces', Georgia, serif",

@@ -1,45 +1,70 @@
-import os
+import json
+import logging
+from datetime import date
 from math import radians, cos, sin, asin, sqrt
 import pandas as pd
-import numpy as np
 import joblib
-from backend.app.config import MODEL_PATH, DATA_PATH
+from backend.app.config import MODEL_PATH, DATA_PATH, METRICS_PATH
+from backend.app.errors import AppError
+
+logger = logging.getLogger("housing.ml")
 
 
-model = None
-if os.path.exists(MODEL_PATH):
+def _load(path, loader, what):
     try:
-        model = joblib.load(MODEL_PATH)
-        print(f" Loaded ML model from: {MODEL_PATH}")
-    except Exception as e:
-        print(f" Warning loading model: {e}")
+        value = loader(path)
+        logger.info("Loaded %s from %s", what, path)
+        return value
+    except FileNotFoundError:
+        logger.error("%s not found at %s", what, path)
+    except Exception:
+        logger.exception("Failed to load %s from %s", what, path)
+    return None
 
-df = None
-if os.path.exists(DATA_PATH):
-    try:
-        df = pd.read_csv(DATA_PATH)
-        print(f" Loaded dataset from: {DATA_PATH} ({len(df)} rows)")
-    except Exception as e:
-        print(f" Warning loading dataset: {e}")
 
-if df is None or df.empty:
+model = _load(MODEL_PATH, joblib.load, "ML model")
+df = _load(DATA_PATH, pd.read_csv, "dataset")
+if df is None:
     df = pd.DataFrame()
+# Metrics μετρημένα σε αγγελίες που το μοντέλο δεν είδε στην εκπαίδευση (backend/scripts/evaluate_model.py).
+METRICS = _load(METRICS_PATH, lambda p: json.loads(p.read_text(encoding="utf-8")), "model metrics")
 
 
-DYNAMIC_MAE = 138.0
-DYNAMIC_MAPE = 0.11
+def check_ready():
+    """Καλείται στην εκκίνηση. Χωρίς μοντέλο, δεδομένα ή metrics η εφαρμογή δεν ξεκινά,
+    αντί να εμφανίζει επινοημένες τιμές σαν πραγματικές."""
+    missing = [name for name, ok in [
+        (f"μοντέλο ({MODEL_PATH})", model is not None),
+        (f"δεδομένα ({DATA_PATH})", not df.empty),
+        (f"metrics ({METRICS_PATH}) - τρέξτε backend/scripts/evaluate_model.py", METRICS is not None),
+    ] if not ok]
+    if missing:
+        raise RuntimeError("Λείπουν αρχεία που χρειάζεται η εφαρμογή: " + "; ".join(missing))
 
-try:
-    if model is not None and not df.empty and 'price' in df.columns:
-        feature_cols = [col for col in df.columns if col not in ['price', 'price_per_sqm', 'id']]
-        sample_df = df[feature_cols].fillna(0)
-        actual_prices = df['price'].values
-        pred_prices = model.predict(sample_df)
-        DYNAMIC_MAE = float(np.mean(np.abs(actual_prices - pred_prices)))
-        DYNAMIC_MAPE = float(np.mean(np.abs((actual_prices - pred_prices) / np.maximum(actual_prices, 1.0))))
-except Exception:
-    DYNAMIC_MAE = 138.0
-    DYNAMIC_MAPE = 0.11
+
+def clean_suburb_name(raw: str) -> str:
+    return str(raw).split('(')[0].split('-')[0].split('–')[0].strip()
+
+
+def _build_suburb_index(data):
+    """καθαρό όνομα (lowercase) -> στοιχεία περιοχής όπως εμφανίζονται στα δεδομένα εκπαίδευσης."""
+    if data.empty or 'suburb' not in data.columns:
+        return {}
+    d = data.assign(_clean=data['suburb'].astype(str).map(clean_suburb_name).str.lower())
+    index = {}
+    for key, rows in d.groupby('_clean'):
+        # Το μοντέλο εκπαιδεύτηκε με το πλήρες όνομα (π.χ. "Κυψέλη (Αθήνα - Κέντρο)") και το αντίστοιχο area.
+        raw = rows['suburb'].mode()[0]
+        index[key] = {
+            "name": clean_suburb_name(raw),
+            "model_suburb": raw,
+            "model_area": rows.loc[rows['suburb'] == raw, 'area'].mode()[0],
+            "rows": rows.drop(columns='_clean'),
+        }
+    return index
+
+
+SUBURB_INDEX = _build_suburb_index(df)
 
 
 # Πλήρης Κατάλογος Σταθμών Μετρό & ΗΣΑΠ Αθήνας
@@ -211,10 +236,31 @@ COORDS_MAP = {
     "κέντρο": (37.9800, 23.7300)
 }
 
-CAR_DEPENDENT_PREMIUM_AREAS = {
-    "εκάλη", "διόνυσος", "βούλα", "βουλιαγμένη", "παλαιό ψυχικό", 
-    "φιλοθέη", "δροσιά", "άνοιξη", "καστρί", "βάρη", "παπάγου", "αλσούπολη"
-}
+# Αντιπροσωπευτική απόσταση (m) για κάθε επιλογή χρόνου με τα πόδια της φόρμας.
+METRO_WALK_DISTANCE_M = {"under_5": 280, "5_10": 600, "10_15": 1000, "over_15": 1600}
+METRO_WALK_LABEL = {"under_5": "Έως 5 λεπτά με τα πόδια", "5_10": "5-10 λεπτά με τα πόδια",
+                    "10_15": "10-15 λεπτά με τα πόδια", "over_15": "Πάνω από 15 λεπτά με τα πόδια"}
+# Ο όροφος στα δεδομένα (floorNumber του Spitogatos) είναι κωδικός, όχι αριθμός ορόφου:
+# 1 υπόγειο, 2 ημιυπόγειο, 3 ισόγειο, 4 υπερυψωμένο, 6 = 1ος, 7 = 2ος, ... (όροφος + 5).
+# Το 0 σημαίνει ότι η τιμή έλειπε από την αγγελία.
+def encode_floor(floor: int) -> int:
+    if floor < 0:
+        return 1
+    if floor == 0:
+        return 3
+    return floor + 5
+
+
+def decode_floor(code: int) -> int | None:
+    """Κωδικός δεδομένων -> όροφος της φόρμας (το ημιυπόγειο ως υπόγειο, το υπερυψωμένο ως ισόγειο)."""
+    code = int(code)
+    if code == 0:
+        return None
+    return {1: -1, 2: -1, 3: 0, 4: 0}.get(code, code - 5)
+
+
+# Επιδράσεις μικρότερες από αυτό δεν εμφανίζονται ως παράγοντες (θόρυβος του μοντέλου).
+MIN_FACTOR_EUR = 10
 
 def haversine_m(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -243,29 +289,64 @@ def get_all_suburbs():
             if cleaned:
                 suburbs_set.add(cleaned)
     
-    for alias in SUBURB_ALIASES.keys():
-        suburbs_set.add(alias.capitalize())
-        
+    for alias, parent in SUBURB_ALIASES.items():
+        if parent.lower() in SUBURB_INDEX:
+            suburbs_set.add(alias.capitalize())
+
     return sorted(list(suburbs_set))
 
 def get_model_metadata():
-    total_listings = len(df) if df is not None and not df.empty else 4162
-    accuracy_pct = 88.9
-    try:
-        if model is not None and df is not None and not df.empty and 'price' in df.columns and hasattr(model, 'score'):
-            feature_cols = [col for col in df.columns if col not in ['price', 'price_per_sqm', 'id']]
-            sample_df = df[feature_cols].fillna(0)
-            r2_val = model.score(sample_df, df['price'])
-            accuracy_pct = round(max(85.0, min(99.2, r2_val * 100)), 1)
-    except Exception:
-        accuracy_pct = 88.9
-
+    m = METRICS["end_to_end"]
     return {
-        "dataset_size": f"{total_listings:,}".replace(",", ".") + "+",
-        "model_accuracy": f"{accuracy_pct}%",
-        "mae": round(DYNAMIC_MAE, 2),
-        "mape": round(DYNAMIC_MAPE * 100, 1)
+        "dataset_size": len(df),
+        "test_size": METRICS["test_rows"],
+        "r2": m["r2"],
+        "mae": m["mae"],
+        "mape_pct": round(m["mape"] * 100, 1),
     }
+
+# Ελάχιστες αγγελίες για να εμφανιστεί μια περιοχή στα δημόσια στατιστικά.
+MIN_LISTINGS_PUBLIC = 15
+
+
+def _valid_rows():
+    cols = ['suburb', 'price_per_sqm', 'latitude', 'longitude']
+    return df.dropna(subset=cols)
+
+
+def get_city_stats():
+    """Συγκεντρωτικά στοιχεία για την αρχική και τις λίστες περιοχών.
+    Επιστρέφονται μόνο μέσοι όροι, ποτέ μεμονωμένες αγγελίες."""
+    rows = _valid_rows()
+    grouped = (rows.assign(name=rows['suburb'].map(clean_suburb_name))
+               .groupby('name')['price_per_sqm'].agg(['mean', 'count']).reset_index())
+    grouped = grouped[grouped['count'] >= MIN_LISTINGS_PUBLIC]
+    renovated = rows['renovated'].dropna()
+    return {
+        "totalProperties": len(rows),
+        "neighborhoodCount": len(grouped),
+        "avgPricePerSqm": round(float(rows['price_per_sqm'].mean()), 1),
+        "pctNotRenovated": round(float((renovated == 0).mean() * 100)) if len(renovated) else None,
+        "neighborhoods": [
+            {"name": r['name'], "avgPrice": round(float(r['mean']), 2), "count": int(r['count'])}
+            for _, r in grouped.iterrows()
+        ],
+    }
+
+
+def get_heatmap_areas():
+    """Μέση τιμή ανά τ.μ. και κέντρο κάθε περιοχής (όπως ορίζεται στα δεδομένα) για τον χάρτη της αρχικής."""
+    grouped = _valid_rows().groupby('suburb').agg(
+        lat=('latitude', 'mean'), lon=('longitude', 'mean'),
+        price=('price_per_sqm', 'mean'), count=('price_per_sqm', 'count'),
+    ).reset_index()
+    grouped = grouped[grouped['count'] >= MIN_LISTINGS_PUBLIC]
+    return [
+        {"name": clean_suburb_name(r['suburb']), "position": [round(float(r['lat']), 5), round(float(r['lon']), 5)],
+         "price": round(float(r['price']), 2), "count": int(r['count'])}
+        for _, r in grouped.iterrows()
+    ]
+
 
 def get_all_suburbs_stats():
     if df is None or df.empty or 'suburb' not in df.columns:
@@ -315,16 +396,12 @@ def get_all_suburbs_stats():
         parent_lower = parent_name.lower()
 
         if alias_lower not in stats_dict:
-            parent_stats = stats_dict.get(parent_lower, {
-                "avgRent": 550.0,
-                "medianRent": 520.0,
-                "minRent": 300.0,
-                "maxRent": 1100.0,
-                "avgSqmPrice": 10.7,
-                "listingsCount": 50
-            })
+            parent_stats = stats_dict.get(parent_lower)
+            if parent_stats is None:
+                continue
 
-            coords = COORDS_MAP.get(alias_lower, (37.9755, 23.7348))
+            # Χωρίς δικές του συντεταγμένες, το alias εμφανίζεται στη θέση της περιοχής στην οποία ανήκει.
+            coords = COORDS_MAP.get(alias_lower, (parent_stats["lat"], parent_stats["lon"]))
             stats_dict[alias_lower] = {
                 "name": alias_name.capitalize(),
                 "avgRent": parent_stats["avgRent"],
@@ -352,12 +429,12 @@ def predict_rent_price(data):
             return v if v is not None else default
         return default
 
-    suburb_input = str(get_val('suburb', 'Αθήνα - Κέντρο')).strip()
-    sqm = float(get_val('sqm', 70))
-    bedrooms = int(get_val('bedrooms', 2))
-    bathrooms = int(get_val('bathrooms', 1))
-    floor = int(get_val('floor', 2))
-    year_built = int(get_val('year_built', 1995))
+    suburb_input = str(get_val('suburb', '')).strip()
+    sqm = float(get_val('sqm'))
+    bedrooms = int(get_val('bedrooms'))
+    bathrooms = int(get_val('bathrooms'))
+    floor = int(get_val('floor'))
+    year_built = int(get_val('year_built'))
     metro_walk_time = str(get_val('metro_walk_time', 'auto')).strip().lower()
     elevator = bool(get_val('elevator', False))
     renovated = bool(get_val('renovated', False))
@@ -366,36 +443,28 @@ def predict_rent_price(data):
     user_asking = get_val('user_asking_price', None)
     vision_score = get_val('vision_score', None)
 
-    current_year = 2026
-    property_age = current_year - year_built
+    property_age = date.today().year - year_built
 
-    suburb_raw = suburb_input.split('(')[0].split('-')[0].split('–')[0].strip().lower()
-
-    
-    resolved_suburb = SUBURB_ALIASES.get(suburb_raw, suburb_input)
-    resolved_raw = resolved_suburb.split('(')[0].split('-')[0].split('–')[0].strip().lower()
-    
-    
-    suburb_df = pd.DataFrame()
-    if df is not None and not df.empty and 'suburb' in df.columns:
-        suburb_df = df[df['suburb'].astype(str).str.lower().str.contains(resolved_raw, na=False, regex=False)]
+    suburb_raw = clean_suburb_name(suburb_input).lower()
+    resolved_raw = SUBURB_ALIASES.get(suburb_raw, suburb_raw).lower()
+    suburb_info = SUBURB_INDEX.get(resolved_raw)
+    if suburb_info is None:
+        # Χωρίς αγγελίες για την περιοχή δεν έχουμε ούτε συντεταγμένες ούτε τιμές αναφοράς.
+        raise AppError(422, "UNKNOWN_SUBURB",
+                       f"Δεν υπάρχουν δεδομένα για την περιοχή «{suburb_input}». Επιλέξτε περιοχή από τη λίστα.",
+                       [{"field": "suburb", "message": "Άγνωστη περιοχή"}])
+    suburb_df = suburb_info["rows"]
 
     #  Συντεταγμένες
     if suburb_raw in COORDS_MAP:
         suburb_lat, suburb_lon = COORDS_MAP[suburb_raw]
-    elif not suburb_df.empty and 'latitude' in suburb_df.columns and suburb_df['latitude'].notna().any():
+    else:
         suburb_lat = float(suburb_df['latitude'].mean())
         suburb_lon = float(suburb_df['longitude'].mean())
-    else:
-        suburb_lat, suburb_lon = (37.9755, 23.7348)
 
     #  Μέσος όρος τιμών περιοχής
-    if not suburb_df.empty and 'price' in suburb_df.columns:
-        suburb_avg_price = float(suburb_df['price'].mean())
-        suburb_avg_sqm_price = float(suburb_df['price_per_sqm'].mean()) if 'price_per_sqm' in suburb_df.columns else (suburb_avg_price / max(1.0, sqm))
-    else:
-        suburb_avg_price = 650.0
-        suburb_avg_sqm_price = 11.2
+    suburb_avg_price = float(suburb_df['price'].mean())
+    suburb_avg_sqm_price = float(suburb_df['price_per_sqm'].mean())
 
     #  Υπολογισμός Εγγύτητας σε POIs
     metro_name, suburb_metro_dist = find_nearest_poi(suburb_lat, suburb_lon, METRO_STATIONS)
@@ -403,211 +472,133 @@ def predict_rent_price(data):
     hospital_name, suburb_hospital_dist = find_nearest_poi(suburb_lat, suburb_lon, HOSPITALS)
     park_name, suburb_park_dist = find_nearest_poi(suburb_lat, suburb_lon, PARKS)
 
-    base_predicted_price = None
+    # Ο χρόνος με τα πόδια που δηλώνει ο χρήστης είναι πιο ακριβής από την απόσταση από το κέντρο της περιοχής.
+    metro_distance = METRO_WALK_DISTANCE_M.get(metro_walk_time, float(suburb_metro_dist))
 
-    if model is not None:
-        try:
-            feature_cols = [col for col in df.columns if col not in ['price', 'price_per_sqm', 'id']] if (df is not None and not df.empty) else []
-            sample_row = {}
-            for col in feature_cols:
-                if pd.api.types.is_numeric_dtype(df[col]):
-                    sample_row[col] = [df[col].median() if not df[col].empty else 0]
-                else:
-                    mode_val = df[col].mode()
-                    sample_row[col] = [mode_val[0] if not mode_val.empty else '']
+    # Χαρακτηριστικά που δεν ζητάμε από τον χρήστη (π.χ. ενεργειακή κλάση) παίρνουν την τυπική τιμή της περιοχής.
+    feature_cols = [col for col in df.columns if col not in ['price', 'price_per_sqm', 'id']]
+    sample_row = {}
+    for col in feature_cols:
+        source = suburb_df[col] if suburb_df[col].notna().any() else df[col]
+        sample_row[col] = [source.median() if pd.api.types.is_numeric_dtype(source) else source.mode()[0]]
 
-            input_df = pd.DataFrame(sample_row) if sample_row else pd.DataFrame([{}])
-            input_df['sqm'] = float(sqm)
-            input_df['bedrooms'] = int(bedrooms)
-            input_df['bathrooms'] = int(bathrooms)
-            input_df['floor'] = int(floor)
-            input_df['year_built'] = int(year_built)
-            input_df['property_age'] = int(property_age)
-            input_df['suburb'] = str(resolved_suburb)
-            input_df['latitude'] = float(suburb_lat)
-            input_df['longitude'] = float(suburb_lon)
-            input_df['metro_distance_m'] = float(suburb_metro_dist)
-            input_df['uni_distance_m'] = float(suburb_uni_dist)
-            input_df['hospital_distance_m'] = float(suburb_hospital_dist)
-            input_df['park_distance_m'] = float(suburb_park_dist)
+    input_df = pd.DataFrame(sample_row)
+    input_df['sqm'] = float(sqm)
+    input_df['bedrooms'] = int(bedrooms)
+    input_df['bathrooms'] = int(bathrooms)
+    input_df['floor'] = encode_floor(floor)
+    input_df['year_built'] = int(year_built)
+    input_df['property_age'] = int(property_age)
+    # Ίδια μορφή με τα δεδομένα εκπαίδευσης, αλλιώς το one-hot encoding αγνοεί την περιοχή.
+    input_df['suburb'] = suburb_info["model_suburb"]
+    input_df['area'] = suburb_info["model_area"]
+    input_df['latitude'] = float(suburb_lat)
+    input_df['longitude'] = float(suburb_lon)
+    input_df['metro_distance_m'] = float(metro_distance)
+    input_df['uni_distance_m'] = float(suburb_uni_dist)
+    input_df['hospital_distance_m'] = float(suburb_hospital_dist)
+    input_df['park_distance_m'] = float(suburb_park_dist)
 
-            for col, val in [('elevator', elevator), ('renovated', renovated), 
-                             ('furnished', furnished), ('parking', parking)]:
-                if col in input_df.columns:
-                    input_df[col] = 1 if val else 0
+    for col, val in [('elevator', elevator), ('renovated', renovated), ('furnished', furnished)]:
+        input_df[col] = 1 if val else 0
 
-            base_predicted_price = float(model.predict(input_df)[0])
-        except Exception as err:
-            print(f"ML predict error: {err}")
-
-    # Heuristic Fallback
-    if base_predicted_price is None or base_predicted_price <= 0:
-        base_rate = suburb_avg_sqm_price
-        year_mult = 1.0 + max(-0.15, min(0.25, (year_built - 1990) * 0.007))
-        renov_mult = 1.14 if renovated else 1.0
-        furn_mult = 1.10 if furnished else 1.0
-        base_predicted_price = sqm * base_rate * year_mult * renov_mult * furn_mult
-
-    #  Δυναμική Κλιμάκωση Ορόφου & Ασανσέρ
-    if floor <= -1:
-        floor_mult = 0.82
-    elif floor == 0:
-        floor_mult = 0.90
-    else:
-        height_premium = (floor - 1) * 0.025
-        if elevator:
-            floor_mult = 1.0 + height_premium + 0.02
-        else:
-            stair_penalty = (floor - 1) * 0.035
-            floor_mult = max(0.85, 1.0 + height_premium - stair_penalty)
-
-    #  Υπολογισμός Επίδρασης Υπνοδωματίων & Διαρρύθμισης
+    # Παράγοντες τιμής: πόσο αλλάζει η εκτίμηση του μοντέλου αν αλλάξει μόνο ένα χαρακτηριστικό
+    # προς την τυπική τιμή. Όλα τα σενάρια προβλέπονται μαζί σε ένα batch.
+    known_floors = suburb_df['floor'][suburb_df['floor'] != 0].map(decode_floor)
+    typical_floor = int(known_floors.median()) if not known_floors.empty else 1
+    typical_year = int(suburb_df['year_built'].median())
     expected_bedrooms = max(1, round((sqm - 20) / 25))
-    bed_diff = bedrooms - expected_bedrooms
-    bedroom_mult = 1.0 + (bed_diff * 0.045)
-    bedroom_mult = max(0.88, min(1.15, bedroom_mult))
 
-    #  Υπολογισμός Επίδρασης Θέσης Parking (+8%)
-    parking_mult = 1.08 if parking else 1.00
+    def variant(**changes):
+        row = input_df.copy()
+        for k, v in changes.items():
+            row[k] = v
+        return row
 
-    #. Υπολογισμός Επίδρασης Απόστασης Μετρό/ΗΣΑΠ & POI Distances
-    metro_mult = 1.0
-    metro_reason_text = None
-    metro_reason_type = "positive"
-    is_car_dependent = suburb_raw in CAR_DEPENDENT_PREMIUM_AREAS
+    factors = [("elevator", variant(elevator=0 if elevator else 1))]
+    if renovated:
+        factors.append(("renovated", variant(renovated=0)))
+    if furnished:
+        factors.append(("furnished", variant(furnished=0)))
+    if floor != typical_floor:
+        factors.append(("floor", variant(floor=encode_floor(typical_floor))))
+    if bedrooms != expected_bedrooms:
+        factors.append(("bedrooms", variant(bedrooms=expected_bedrooms)))
+    if abs(year_built - typical_year) >= 5:
+        factors.append(("year_built", variant(year_built=typical_year,
+                                              property_age=date.today().year - typical_year)))
+    if metro_walk_time in METRO_WALK_DISTANCE_M:
+        factors.append(("metro", variant(metro_distance_m=float(suburb_metro_dist))))
 
-    if metro_walk_time == 'under_5':
-        metro_mult = 1.08  
-        safe_metro_dist = 280
-        metro_reason_text = f"Εξαιρετική τοποθεσία: Έως 5 λεπτά με τα πόδια από το {metro_name}"
-    elif metro_walk_time == '5_10':
-        metro_mult = 1.04  
-        safe_metro_dist = 600
-        metro_reason_text = f"Άμεση πρόσβαση: 5-10 λεπτά με τα πόδια από το {metro_name}"
-    elif metro_walk_time == '10_15':
-        metro_mult = 1.00  
-        safe_metro_dist = 1000
-        metro_reason_text = f"Κανονική απόσταση: 10-15 λεπτά με τα πόδια από το {metro_name}"
-    elif metro_walk_time == 'over_15':
-        safe_metro_dist = 1600
-        if is_car_dependent:
-            metro_mult = 1.00
-            metro_reason_text = f"Προαστιακή περιοχή (Χαμηλή εξάρτηση από μέσα σταθερής τροχιάς)"
-        else:
-            metro_mult = 0.94  
-            metro_reason_type = "negative"
-            metro_reason_text = f"Απόσταση > 15 λεπτών από σταθμό Μετρό/ΗΣΑΠ (Συνιστάται τοπική συγκοινωνία)"
-    else:
-        
-        if is_car_dependent:
-            metro_mult = 1.00
-            safe_metro_dist = max(500, int(suburb_metro_dist))
-        else:
-            if suburb_metro_dist <= 600:
-                metro_mult = 1.06
-                safe_metro_dist = max(250, int(suburb_metro_dist))
-                metro_reason_text = f"Άμεση πρόσβαση στο {metro_name} (~250 - 600m · 3-8 λεπτά με τα πόδια)"
-            elif suburb_metro_dist <= 1200:
-                metro_mult = 1.02
-                safe_metro_dist = int(suburb_metro_dist)
-                metro_reason_text = f"Πρόσβαση στο {metro_name} (~700m - 1.2km · 8-15 λεπτά με τα πόδια)"
-            else:
-                dist_km = round(max(1.3, suburb_metro_dist / 1000), 1)
-                metro_mult = 0.95
-                safe_metro_dist = int(suburb_metro_dist)
-                metro_reason_type = "negative"
-                metro_reason_text = f"Απόσταση από {metro_name} (~{dist_km}km · συνιστάται τοπική συγκοινωνία)"
+    # Αν το μοντέλο αποτύχει, το σφάλμα φτάνει στον χρήστη ως 500 αντί για μια εκτίμηση από άλλη μέθοδο.
+    predictions = model.predict(pd.concat([input_df] + [v for _, v in factors], ignore_index=True))
+    model_price = float(predictions[0])
+    effects = {key: model_price - float(p) for (key, _), p in zip(factors, predictions[1:])}
+    base_predicted_price = model_price
 
-   
-    base_predicted_price = base_predicted_price * floor_mult * bedroom_mult * parking_mult * metro_mult
-
-    
+    # Η προσαρμογή από τις φωτογραφίες δεν προκύπτει από τα δεδομένα· εμφανίζεται χωριστά ως εκτίμηση.
     vision_delta_eur = 0.0
     if vision_score is not None:
-        try:
-            v_score = float(vision_score)
-            if v_score >= 7.5:
-                vision_delta_pct = (v_score - 7.0) * 0.025
-            elif v_score <= 5.5:
-                vision_delta_pct = (v_score - 6.0) * 0.03
-            else:
-                vision_delta_pct = 0.0
-            vision_delta_eur = round(base_predicted_price * vision_delta_pct, 2)
-        except Exception:
-            vision_delta_eur = 0.0
+        v_score = float(vision_score)
+        if v_score >= 7.5:
+            vision_delta_pct = (v_score - 7.0) * 0.025
+        elif v_score <= 5.5:
+            vision_delta_pct = (v_score - 6.0) * 0.03
+        else:
+            vision_delta_pct = 0.0
+        vision_delta_eur = round(base_predicted_price * vision_delta_pct, 2)
 
     predicted_price = max(150.0, base_predicted_price + vision_delta_eur)
 
-   
-    dynamic_delta = max(60.0, round(predicted_price * DYNAMIC_MAPE, 2))
+    # Εύρος τιμής από το σφάλμα που μετρήθηκε σε αγγελίες εκτός εκπαίδευσης.
+    dynamic_delta = max(60.0, round(predicted_price * METRICS["end_to_end"]["mape"], 2))
     price_min = max(100.0, round(predicted_price - dynamic_delta, 2))
     price_max = round(predicted_price + dynamic_delta, 2)
 
     #  Explainability Reasons
+    def floor_label(f):
+        return "Υπόγειο" if f < 0 else "Ισόγειο" if f == 0 else f"{f}ος όροφος"
+
+    factor_text = {
+        "elevator": "Με ανελκυστήρα" if elevator else "Χωρίς ανελκυστήρα",
+        "renovated": "Ανακαινισμένο",
+        "furnished": "Επιπλωμένο",
+        "floor": f"{floor_label(floor)} (τυπικός για την περιοχή: {floor_label(typical_floor).lower()})",
+        "bedrooms": f"{bedrooms} υπνοδωμάτια (τυπικά για {int(sqm)} τ.μ.: {expected_bedrooms})",
+        "year_built": f"Έτος κατασκευής {year_built} (τυπικό για την περιοχή: {typical_year})",
+        "metro": f"{METRO_WALK_LABEL.get(metro_walk_time, '')} από το {metro_name}",
+    }
     reasons = []
+    for key, delta in sorted(effects.items(), key=lambda kv: -abs(kv[1])):
+        if abs(delta) < MIN_FACTOR_EUR:
+            continue
+        sign = "+" if delta > 0 else "−"
+        reasons.append({"type": "positive" if delta > 0 else "negative",
+                        "text": f"{factor_text[key]}: {sign}€{abs(round(delta))}/μήνα"})
 
-    # Floor & Elevator Reasons
-    if floor <= -1:
-        reasons.append({"type": "negative", "text": "Επίπεδο ημιυπογείου/υπογείου (Μειωμένη εμπορική αξία & φυσικός φωτισμός)"})
-    elif floor == 0:
-        reasons.append({"type": "negative", "text": "Ισόγειο ακίνητο (Χαμηλότερη ζήτηση/μειωμένη ιδιωτικότητα)"})
-    elif floor >= 1 and elevator:
-        reasons.append({"type": "positive", "text": f"{floor}ος όροφος με ανελκυστήρα (Εύκολη πρόσβαση & φυσικό φως)"})
-    elif floor >= 2 and not elevator:
-        reasons.append({"type": "negative", "text": f"{floor}ος όροφος χωρίς ανελκυστήρα (Κλιμακωτή δυσκολία πρόσβασης)"})
-
-    # Bedroom Layout Reasons
-    if bedrooms > expected_bedrooms:
-        reasons.append({"type": "positive", "text": f"Αυξημένος αριθμός υπνοδωματίων ({bedrooms} Υ/Δ) για τα {int(sqm)} τ.μ. (Ευελιξία χώρου/συγκατοίκηση)"})
-    elif bedrooms < expected_bedrooms and sqm >= 65:
-        reasons.append({"type": "negative", "text": f"Περιορισμένος αριθμός υπνοδωματίων ({bedrooms} Υ/Δ) για τα {int(sqm)} τ.μ."})
-
-    # Parking Reason
-    if parking:
-        parking_value_est = int(predicted_price * 0.08)
-        reasons.append({"type": "positive", "text": f"Ιδιωτική θέση στάθμευσης / Parking (+€{parking_value_est}/μήνα)"})
-
-    # Metro Reason
-    if metro_reason_text:
-        reasons.append({
-            "type": metro_reason_type,
-            "text": metro_reason_text
-        })
-
-    # University Proximity
-    if suburb_uni_dist <= 1200:
-        reasons.append({"type": "positive", "text": f"Άμεση εγγύτητα στο {uni_name} (~300m - 1km)"})
-    elif suburb_uni_dist <= 2200:
-        reasons.append({"type": "positive", "text": f"Εύκολη πρόσβαση στο {uni_name} (~1.2 - 2.2km)"})
-
-    # Park Proximity
+    # Πληροφορίες χωρίς επίδραση στην τιμή (type "info").
+    if metro_walk_time not in METRO_WALK_DISTANCE_M:
+        reasons.append({"type": "info", "text": f"Πλησιέστερος σταθμός: {metro_name} (~{int(suburb_metro_dist)}m από το κέντρο της περιοχής)"})
+    if suburb_uni_dist <= 2200:
+        reasons.append({"type": "info", "text": f"Κοντά στο {uni_name}"})
     if suburb_park_dist <= 1000:
-        reasons.append({"type": "positive", "text": f"Κοντά σε χώρους πρασίνου: {park_name} (~250 - 800m)"})
-
-    # Hospital Proximity
+        reasons.append({"type": "info", "text": f"Κοντά σε χώρους πρασίνου: {park_name}"})
     if suburb_hospital_dist <= 1500:
-        reasons.append({"type": "positive", "text": f"Εγγύτητα σε υγειονομική μονάδα: {hospital_name} (~1 - 1.5km)"})
-
-    # Property Features
-    if renovated:
-        reasons.append({"type": "positive", "text": "Πρόσφατη ανακαίνιση (+Αύξηση αξίας)"})
-
-    if property_age <= 10:
-        reasons.append({"type": "positive", "text": f"Νεόδμητο ακίνητο ({year_built})"})
-    elif property_age > 40 and not renovated:
-        reasons.append({"type": "negative", "text": f"Παλαιότητα κτιρίου ({year_built})"})
+        reasons.append({"type": "info", "text": f"Κοντά σε νοσοκομείο: {hospital_name}"})
+    if parking:
+        reasons.append({"type": "info", "text": "Θέση στάθμευσης: δεν επηρεάζει την εκτίμηση, γιατί δεν υπάρχει στα δεδομένα αγγελιών"})
 
     # AI Vision Reason
     if vision_delta_eur > 0:
-        reasons.append({"type": "positive", "text": f"Προσαρμογή AI Vision: +€{int(vision_delta_eur)}/μήνα (άριστη οπτική κατάσταση)"})
+        reasons.append({"type": "positive", "text": f"Προσαρμογή AI Vision: +€{int(vision_delta_eur)}/μήνα (άριστη οπτική κατάσταση· εκτίμηση, όχι από τα δεδομένα)"})
     elif vision_delta_eur < 0:
-        reasons.append({"type": "negative", "text": f"Προσαρμογή AI Vision: -€{int(abs(vision_delta_eur))}/μήνα (ανάγκη ευπρεπισμού)"})
+        reasons.append({"type": "negative", "text": f"Προσαρμογή AI Vision: -€{int(abs(vision_delta_eur))}/μήνα (ανάγκη ευπρεπισμού· εκτίμηση, όχι από τα δεδομένα)"})
 
-    if len(reasons) == 0:
-        reasons.append({"type": "positive", "text": f"Τυπικά χαρακτηριστικά ακινήτου στην περιοχή {suburb_input}"})
+    safe_metro_dist = int(metro_distance) if metro_walk_time in METRO_WALK_DISTANCE_M else max(250, int(suburb_metro_dist))
 
-    value_score = 7.5
-    deal_type = "Υπολογισμός βάσει ML εκτίμησης"
+    # Χωρίς ζητούμενο ενοίκιο δεν υπάρχει τίποτα να αξιολογηθεί.
+    value_score = None
+    deal_type = None
 
     if user_asking is not None and str(user_asking).strip() != "":
         try:
@@ -631,7 +622,8 @@ def predict_rent_price(data):
     safe_park_dist = max(250, int(suburb_park_dist))
 
     return {
-        "base_ml_price": round(base_predicted_price, 2),
+        "model_price": round(model_price, 2),
+        "price_before_vision": round(base_predicted_price, 2),
         "vision_adjustment_eur": round(vision_delta_eur, 2),
         "estimated_price": round(predicted_price, 2),
         "price_min": price_min,
@@ -648,7 +640,7 @@ def predict_rent_price(data):
             "park_name": park_name
         },
         "reasons": reasons,
-        "value_score": round(value_score, 1),
+        "value_score": round(value_score, 1) if value_score is not None else None,
         "deal_type": deal_type,
         "suburb_stats": {
             "avg_price": round(suburb_avg_price, 2),

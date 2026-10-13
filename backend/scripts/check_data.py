@@ -1,6 +1,6 @@
 import pandas as pd
 
-csv_path = "frontend/public/data/cleaned_properties.csv"
+csv_path = "backend/data/cleaned_properties.csv"
 
 try:
     df = pd.read_csv(csv_path)

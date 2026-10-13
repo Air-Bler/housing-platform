@@ -2,8 +2,8 @@ import React from 'react';
 import { Sparkles, Star, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { styles } from './estimator.styles';
 
-export default function VisionAnalysisCard({ visionLoading, visionResult }) {
-  if (!visionLoading && (!visionResult || visionResult.error)) {
+export default function VisionAnalysisCard({ visionLoading, visionResult, visionError }) {
+  if (!visionLoading && !visionResult && !visionError) {
     return null;
   }
 
@@ -36,6 +36,17 @@ export default function VisionAnalysisCard({ visionLoading, visionResult }) {
               Το AI εξετάζει τους χώρους και τη φωτεινότητα
             </span>
           </div>
+        </div>
+      )}
+
+      {visionError && !visionLoading && (
+        <div style={styles.visionBody}>
+          <p style={{ ...styles.visionSummaryText, color: '#8A3226', display: 'flex', gap: '0.4rem' }}>
+            <AlertCircle size={16} color="#B33F30" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <span>
+              {visionError} Η εκτίμηση παραπάνω δεν λαμβάνει υπόψη τις φωτογραφίες.
+            </span>
+          </p>
         </div>
       )}
 

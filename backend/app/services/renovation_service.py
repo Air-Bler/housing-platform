@@ -1,7 +1,8 @@
-import json
-import base64
-from openai import OpenAI
-from backend.app.config import OPENAI_API_KEY
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+
+from backend.app.services.ai_client import run_vision_json
 from backend.app.services.ml_service import predict_rent_price, df
 
 
@@ -140,7 +141,8 @@ def _payback_years(net_cost, annual_net):
     return None
 
 
-def compute_renovation_roi(data, vision=None):
+def compute_renovation_roi(data, vision: "RenovationVision | None" = None):
+    """vision: επαληθευμένη ανάλυση φωτογραφιών ή None (τότε χρησιμοποιείται η δηλωμένη κατάσταση)."""
     sqm = float(data["sqm"])
     bedrooms = int(data["bedrooms"])
     bathrooms = int(data["bathrooms"])
@@ -152,14 +154,13 @@ def compute_renovation_roi(data, vision=None):
 
     budget = data.get("budget")
     years_vacant = data.get("years_vacant")
-    tax_rate = float(data.get("tax_rate") or 0.15)
+    tax_rate = float(data["tax_rate"]) if data.get("tax_rate") is not None else 0.15
     use_subsidy = bool(data.get("use_subsidy"))
 
     
-    has_vision = bool(vision) and not vision.get("error")
-    if has_vision and isinstance(vision.get("needed_works"), list):
-        needs = {w for w in vision["needed_works"] if w in WORK_ITEMS}
-        current_vision = float(vision.get("condition_score", profile["vision_score"]))
+    if vision is not None:
+        needs = set(vision.needed_works)
+        current_vision = vision.condition_score
     else:
         needs = set(profile["needs"])
         current_vision = profile["vision_score"]
@@ -307,11 +308,34 @@ def compute_renovation_roi(data, vision=None):
     }
 
 
-async def analyze_renovation_photos(suburb: str, sqm: float, year_built: int, images: list):
-    if not OPENAI_API_KEY:
-        return {"error": "Missing API Key"}
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+VISION_WORK_KEYS = [k for k in WORK_ITEMS if k != "furnishing"]
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+
+class RenovationVision(BaseModel):
+    """Η διάγνωση που περιμένουν ο υπολογισμός ROI και το frontend. Οτιδήποτε άλλο απορρίπτεται."""
+    model_config = ConfigDict(extra="ignore")
+
+    condition_score: float = Field(ge=1.0, le=10.0)
+    condition_level: Literal["light", "medium", "heavy"]
+    summary: NonEmptyText
+    detected_issues: list[NonEmptyText] = Field(default_factory=list, max_length=6)
+    strengths: list[NonEmptyText] = Field(default_factory=list, max_length=5)
+    needed_works: list[str] = Field(default_factory=list)
+    quick_wins: list[NonEmptyText] = Field(default_factory=list, max_length=5)
+
+    @field_validator("needed_works")
+    @classmethod
+    def _known_works(cls, v: list[str]) -> list[str]:
+        unknown = [w for w in v if w not in VISION_WORK_KEYS]
+        if unknown:
+            raise ValueError(f"unknown work keys: {unknown}")
+        return list(dict.fromkeys(v))
+
+
+async def analyze_renovation_photos(suburb: str, sqm: float, year_built: int,
+                                    images: list[tuple[str, str]]) -> RenovationVision:
+    """images: ήδη ελεγμένες εικόνες (mime_type, base64). Σε αποτυχία σηκώνει AppError."""
     work_keys = "\n".join(f'    - "{k}": {v["label"]}' for k, v in WORK_ITEMS.items() if k != "furnishing")
 
     prompt_text = f"""
@@ -351,28 +375,4 @@ async def analyze_renovation_photos(suburb: str, sqm: float, year_built: int, im
     }}
     """
 
-    content_parts = [{"type": "text", "text": prompt_text}]
-    for img in images:
-        contents = await img.read()
-        mime_type = img.content_type if img.content_type else "image/jpeg"
-        base64_image = base64.b64encode(contents).decode('utf-8')
-        content_parts.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:{mime_type};base64,{base64_image}", "detail": "high"}
-        })
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": content_parts}],
-            response_format={"type": "json_object"},
-            max_tokens=700,
-            temperature=0.1
-        )
-        result = json.loads(response.choices[0].message.content)
-        if result.get("condition_level") not in CONDITION_PROFILES:
-            result["condition_level"] = None
-        return result
-    except Exception as e:
-        print(f"OpenAI Renovation Vision Error: {e}")
-        return {"error": "Η ανάλυση φωτογραφιών δεν ολοκληρώθηκε."}
+    return await run_vision_json(prompt_text, images, RenovationVision, max_tokens=700)

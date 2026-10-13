@@ -7,6 +7,7 @@ import CashflowChart from '../components/renovation/CashflowChart';
 import CostBreakdown from '../components/renovation/CostBreakdown';
 import RenovationDiagnosisCard from '../components/renovation/RenovationDiagnosisCard';
 import { renovationStyles as rs, formatEuro, formatYears } from '../components/renovation/renovation.styles';
+import { postForm, checkImages } from '../api';
 
 import {
   Hammer,
@@ -61,6 +62,7 @@ export default function RenovationPage() {
   const [formErrors, setFormErrors] = useState({});
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
+  const [imageNotices, setImageNotices] = useState([]);
   const [result, setResult] = useState(null);
   const [selectedKey, setSelectedKey] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -79,16 +81,18 @@ export default function RenovationPage() {
   }, []);
 
   const handleFilesAdded = (newFiles) => {
-    const validFiles = Array.from(newFiles).filter((file) => file.type.startsWith('image/'));
-    if (validFiles.length === 0) return;
-    const updatedImages = [...images, ...validFiles].slice(0, 10);
-    setImages(updatedImages);
-    setPreviews(updatedImages.map((file) => URL.createObjectURL(file)));
+    const { accepted, rejected } = checkImages(images, Array.from(newFiles));
+    setImageNotices(rejected);
+    if (accepted.length === 0) return;
+    setImages([...images, ...accepted]);
+    setPreviews([...previews, ...accepted.map((file) => URL.createObjectURL(file))]);
   };
 
   const handleRemoveImage = (index) => {
+    URL.revokeObjectURL(previews[index]);
     setImages(images.filter((_, i) => i !== index));
     setPreviews(previews.filter((_, i) => i !== index));
+    setImageNotices([]);
   };
 
   const handleChange = (e) => {
@@ -102,8 +106,10 @@ export default function RenovationPage() {
   const handleClear = () => {
     setFormData(initialForm);
     setFormErrors({});
+    previews.forEach((url) => URL.revokeObjectURL(url));
     setImages([]);
     setPreviews([]);
+    setImageNotices([]);
     setResult(null);
     setSelectedKey(null);
     setError(null);
@@ -123,8 +129,11 @@ export default function RenovationPage() {
     if (!formData.year_built || isNaN(yearVal)) errors.year_built = 'Συμπληρώστε έτος.';
     else if (yearVal < 1850 || yearVal > currentYear) errors.year_built = `1850 - ${currentYear}.`;
 
-    ['bedrooms', 'bathrooms', 'floor'].forEach((f) => {
-      if (formData[f] === '' || isNaN(parseInt(formData[f], 10))) errors[f] = 'Υποχρεωτικό.';
+    const ranges = { bedrooms: [0, 15], bathrooms: [1, 10], floor: [-2, 40] };
+    Object.entries(ranges).forEach(([f, [min, max]]) => {
+      const v = parseInt(formData[f], 10);
+      if (formData[f] === '' || isNaN(v)) errors[f] = 'Υποχρεωτικό.';
+      else if (v < min || v > max) errors[f] = `${min} - ${max}.`;
     });
 
     if (formData.budget !== '' && !(parseFloat(formData.budget) > 0)) errors.budget = 'Μη έγκυρο ποσό.';
@@ -156,20 +165,20 @@ export default function RenovationPage() {
     if (formData.years_vacant !== '') body.append('years_vacant', formData.years_vacant);
     images.forEach((file) => body.append('images', file));
 
-    fetch('http://127.0.0.1:8000/api/renovation-roi', { method: 'POST', body })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Σφάλμα API (${res.status})`);
-        return res.json();
-      })
+    postForm('/api/renovation-roi', body)
       .then((data) => {
         setResult(data);
         setSelectedKey(data.recommended_key);
-        setLoading(false);
       })
       .catch((err) => {
-        setError('Κάτι πήγε στραβά κατά τον υπολογισμό. ' + err.message);
-        setLoading(false);
-      });
+        const fieldErrors = {};
+        err.details.forEach((d) => {
+          if (d.field && d.field in formData) fieldErrors[d.field] = d.message;
+        });
+        if (Object.keys(fieldErrors).length) setFormErrors((prev) => ({ ...prev, ...fieldErrors }));
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
   };
 
   const recommended = result && result.scenarios.find((s) => s.key === result.recommended_key);
@@ -262,7 +271,7 @@ export default function RenovationPage() {
             <div className="reno-grid3" style={styles.grid3}>
               {numberField('bedrooms', 'Υπνοδωμάτια *', 'π.χ. 2')}
               {numberField('bathrooms', 'Μπάνια *', 'π.χ. 1')}
-              {numberField('floor', 'Όροφος *', 'π.χ. 3')}
+              {numberField('floor', 'Όροφος *', '0 = ισόγειο, -1 = υπόγειο')}
             </div>
             <div style={styles.pillsGrid}>
               <div
@@ -317,6 +326,7 @@ export default function RenovationPage() {
               previews={previews}
               onFilesAdded={handleFilesAdded}
               onRemoveImage={handleRemoveImage}
+              notices={imageNotices}
             />
             <span style={rs.hint}>
               Με φωτογραφίες, το AI εντοπίζει τις εργασίες που χρειάζονται και υπερισχύει της κατάστασης που δηλώσατε. Έως 10 εικόνες.

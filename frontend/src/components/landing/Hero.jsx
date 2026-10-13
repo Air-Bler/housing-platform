@@ -4,7 +4,13 @@ import Heatmap from "./Heatmap";
 
 export default function Hero() {
   return (
-    <section style={styles.hero}>
+    <section className="hero-grid" style={styles.hero}>
+      <style>{`
+        @media (max-width: 820px) {
+          .hero-grid { grid-template-columns: 1fr !important; gap: 28px !important; padding: 24px 16px 36px !important; }
+          .hero-grid h1 { font-size: 34px !important; }
+        }
+      `}</style>
       <div style={styles.left}>
         <h1 style={styles.title}>
           Ό,τι χρειάζεσαι
